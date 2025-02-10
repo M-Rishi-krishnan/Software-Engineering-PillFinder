@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 350px;
+            text-align: center;
+        }
+        .login-container h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .login-container h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .login-container input[type="email"],
+        .login-container input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .login-container input[type="email"]:focus,
+        .login-container input[type="password"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .login-container .forgot-password {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+        .login-container .forgot-password a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .login-container .forgot-password a:hover {
+            text-decoration: underline;
+        }
+        .login-container .login-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .login-container .login-button:hover {
+            background-color: #0056b3;
+        }
+        .login-container .signup-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+        .login-container .signup-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .login-container .signup-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>Choose Account Type</h1>
+        <h2>Hello doctor!</h2>
+        <p>Please fill out the form below to get started</p>
+        <form>
+            <input type="email" placeholder="Email" value="Mahisadd@gmail" readonly>
+            <input type="password" placeholder="Password">
+            <div class="forgot-password">
+                <a href="#">Forgot?</a>
+            </div>
+            <button type="submit" class="login-button">Login</button>
+        </form>
+        <div class="signup-link">
+            No account? <a href="#">Signup</a>
+        </div>
+    </div>
+</body>
+</html>
