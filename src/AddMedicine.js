@@ -1,46 +1,78 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import "./AddMedicine.css"; // Import CSS
 
 const AddMedicine = () => {
   const [medicineName, setMedicineName] = useState("");
   const [stock, setStock] = useState("");
   const [price, setPrice] = useState("");
+  const [medicines, setMedicines] = useState([]); // Store medicines
+  const [storeName, setStoreName] = useState("");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState(""); // ✅ State for errors
-  const [loading, setLoading] = useState(false); // ✅ State for disabling button during submission
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  
+  const email = localStorage.getItem("email"); // Fetch logged-in user's email
 
-  const navigate = useNavigate(); // ✅ Fix: Define navigate
-  const storeName = localStorage.getItem("storeName"); // ✅ Fix: Get store name from localStorage
+  useEffect(() => {
+    if (!email) {
+      setError("User not found. Please log in again.");
+      navigate("/");
+      return;
+    }
+    fetchStoreName();
+  }, [email]);
 
+  // Fetch Store Name
+  const fetchStoreName = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/get-store?email=${email}`);
+      const data = await response.json();
+      if (data.success && data.store) {
+        setStoreName(data.store);
+        fetchMedicines(data.store);
+      } else {
+        setError(data.message || "Failed to fetch store name.");
+      }
+    } catch (error) {
+      setError("Failed to connect to the server.");
+    }
+  };
+
+  // Fetch Medicines
+  const fetchMedicines = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:5000/get-medicines?email=${email}`);
+      const data = await response.json();
+      if (data.success) {
+        setMedicines(data.medicines);
+      } else {
+        setError(data.message || "Failed to load medicines.");
+      }
+    } catch (error) {
+      setError("Failed to connect to the server.");
+    }
+  };
+
+  // Add New Medicine
   const handleSubmit = async () => {
     setMessage("");
     setError("");
 
-    // ✅ Ensure fields are not empty
     if (!medicineName || !stock || !price) {
       setError("All fields are required.");
       return;
     }
 
-    // ✅ Ensure store name exists
-    if (!storeName) {
-      setError("Store name not found! Please create a store first.");
-      return;
-    }
-
     const requestBody = {
-      email: localStorage.getItem("email"), 
-      storeName: localStorage.getItem("storeName"), // ✅ Ensure storeName is stored on login
+      email,
       medicineName,
       stock: parseInt(stock, 10),
       price: parseFloat(price),
     };
-    
 
-    console.log("🔹 Sending Request:", requestBody); // ✅ Debugging log
-
-    setLoading(true); // ✅ Disable button while submitting
-
+    setLoading(true);
     try {
       const response = await fetch("http://127.0.0.1:5000/add-medicine", {
         method: "POST",
@@ -49,70 +81,142 @@ const AddMedicine = () => {
       });
 
       const data = await response.json();
-      console.log("🔹 Server Response:", data); // ✅ Debugging log
-
-      if (response.ok && data.success) {
+      if (data.success) {
         setMessage("Medicine added successfully!");
         setMedicineName("");
         setStock("");
         setPrice("");
-
-        // ✅ Redirect to dashboard after success
-        //setTimeout(() => navigate("/dashboard"), 2000);
+        fetchMedicines(); // Refresh list
       } else {
         setError(data.message || "Failed to add medicine.");
       }
     } catch (error) {
-      console.error("❌ Error:", error);
       setError("Failed to connect to the server.");
     } finally {
-      setLoading(false); // ✅ Re-enable button
+      setLoading(false);
     }
   };
 
+  // Update Medicine (Stock & Price)
+  const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
+    setError("");
+    setMessage("");
+
+    const requestBody = {
+      email,
+      medicineName,
+      stock: parseInt(updatedStock, 10),
+      price: parseFloat(updatedPrice),
+    };
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/update-medicine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setMessage("Medicine updated successfully!");
+        fetchMedicines(); // Refresh list
+      } else {
+        setError(data.message || "Failed to update medicine.");
+      }
+    } catch (error) {
+      setError("Failed to connect to the server.");
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/");
+  };
+
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
-      <h1 className="text-3xl font-semibold text-blue-700 mb-6">Add Medicine</h1>
+    <div className="container">
+      {/* Navbar */}
+      <div className="navbar">
+        <h2 className="store-title">Store: {storeName || "Loading..."}</h2>
+        <button className="logout-btn" onClick={handleLogout}>
+          <i className="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
 
-      <div className="flex flex-col space-y-4 w-96 p-6 bg-white shadow-lg rounded-lg">
-        <input
-          type="text"
-          placeholder="Medicine Name"
-          value={medicineName}
-          onChange={(e) => setMedicineName(e.target.value)}
-          className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      {/* Add Medicine Form */}
+      <div className="add-medicine-container">
+        <h1>Add Medicine</h1>
+
+        <input 
+          type="text" 
+          placeholder="Medicine Name" 
+          value={medicineName} 
+          onChange={(e) => setMedicineName(e.target.value)} 
+          className="input-field"
         />
-        <input
-          type="number"
-          placeholder="Stock"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        <input 
+          type="number" 
+          placeholder="Stock" 
+          value={stock} 
+          onChange={(e) => setStock(e.target.value)} 
+          className="input-field"
         />
-        <input
-          type="number"
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        <input 
+          type="number" 
+          placeholder="Price" 
+          value={price} 
+          onChange={(e) => setPrice(e.target.value)} 
+          className="input-field"
         />
 
-        {/* Submit Button */}
-        <button
-          className={`bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg ${
-            loading ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? "Adding..." : "Add Medicine"}
+        <button className="submit-btn" onClick={handleSubmit} disabled={loading}>
+          <i className="fas fa-plus-circle"></i> {loading ? "Adding..." : "Add Medicine"}
         </button>
 
-        {/* Error Message */}
-        {error && <p className="text-center text-red-500 mt-3">{error}</p>}
+        {error && <p className="error-msg">{error}</p>}
+        {message && <p className="success-msg">{message}</p>}
 
-        {/* Success Message */}
-        {message && <p className="text-center text-green-500 mt-3">{message}</p>}
+        {/* Medicine List */}
+        <h2 className="medicine-list-heading">Available Medicines</h2>
+        <div className="medicine-list">
+          {medicines.length > 0 ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Stock</th>
+                  <th>Price</th>
+                  <th>Update</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map((med, index) => (
+                  <tr key={index}>
+                    <td>{med.medicineName}</td>
+                    <td><input type="number" value={med.stock} onChange={(e) => {
+                          const updated = [...medicines];
+                          updated[index].stock = e.target.value;
+                          setMedicines(updated);
+                        }}/></td>
+                    <td><input type="number" value={med.price} onChange={(e) => {
+                          const updated = [...medicines];
+                          updated[index].price = e.target.value;
+                          setMedicines(updated);
+                        }}/></td>
+                    <td>
+                      <button className="update-btn" onClick={() => handleUpdate(med.medicineName, med.stock, med.price)}>
+                        <i className="fas fa-edit"></i> Update
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="no-medicine">No medicines available.</p>
+          )}
+        </div>
       </div>
     </div>
   );

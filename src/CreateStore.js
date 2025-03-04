@@ -1,23 +1,98 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "./CreateStore.css";
+import { FaStore, FaUser, FaPhone } from "react-icons/fa";
+
+// Custom marker icon
+const storeIconUrl = "https://cdn-icons-png.flaticon.com/512/4320/4320337.png";
+
+const storeIcon = new L.Icon({
+  iconUrl: storeIconUrl,
+  iconSize: [40, 40],
+});
 
 const CreateStore = () => {
   const [storeName, setStoreName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
+  const [location, setLocation] = useState({ lat: 28.6139, lng: 77.209 }); // Default: New Delhi
+  const [address, setAddress] = useState("Default location: New Delhi"); 
+
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const newLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setLocation(newLocation);
+          setError(""); 
+          fetchAddress(newLocation.lat, newLocation.lng);
+        },
+        (error) => {
+          setError("Click to select location");
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by your browser.");
+    }
+  }, []);
+
+  const fetchAddress = async (lat, lng) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+      const data = await response.json();
+      if (data && data.display_name) {
+        setAddress(data.display_name);
+      } else {
+        setAddress("Address not found");
+      }
+    } catch (error) {
+      setAddress("Error fetching address");
+    }
+  };
+
+  const LocationMarker = () => {
+    useMapEvents({
+      click(e) {
+        const newLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+        setLocation(newLocation);
+        setError("");
+        fetchAddress(newLocation.lat, newLocation.lng);
+      },
+    });
+
+    return (
+      <Marker position={[location.lat, location.lng]} icon={storeIcon}>
+        <Popup>{address}</Popup>
+      </Marker>
+    );
+  };
+
   const handleCreateStore = async () => {
-    if (!storeName.trim()) {
-      setError("Store name cannot be empty.");
+    if (!storeName.trim() || !ownerName.trim() || !phone.trim() || location.lat == null || location.lng == null) {
+      setError("All fields are required.");
       return;
     }
   
     const requestBody = {
       email: localStorage.getItem("email"),
-      storeName: storeName,
+      storeName,
+      ownerName,
+      phone,
+      latitude: location.lat,   // ✅ Ensure it's sent correctly
+      longitude: location.lng,  // ✅ Ensure it's sent correctly
+      address,
     };
   
-    console.log("🔹 Sending Data:", requestBody); // ✅ Debugging log
+    console.log("📤 Sending Data:", requestBody);  // 🔴 Debugging log
   
     try {
       const response = await fetch("http://127.0.0.1:5000/create-store", {
@@ -27,41 +102,92 @@ const CreateStore = () => {
       });
   
       const data = await response.json();
-      console.log("🔹 Server Response:", data); // ✅ Debugging log
+      console.log("🔄 Server Response:", data);  // 🔴 Debugging log
   
       if (response.ok && data.success) {
-        localStorage.setItem("storeName", storeName); // ✅ Store name in localStorage
         alert("Store created successfully!");
-        navigate("/add-medicine"); // ✅ Redirect to medicine add page
+        navigate("/add-medicine");
       } else {
         setError(data.message);
       }
     } catch (err) {
+      console.error("❌ Failed to create store:", err);
       setError("Failed to create store. Check your connection.");
     }
   };
   
+  
+  
 
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
-      <h1 className="text-3xl font-semibold text-blue-700 mb-6">Create Your Store</h1>
+    <div className="createstorebody">
+      <div className="create-store-container">
+        
+        {/* Display store marker icon at the top */}
+        <div className="store-icon-container">
+          <img src={storeIconUrl} alt="Store Icon" className="store-icon-image" />
+        </div>
 
-      <input
-        type="text"
-        className="p-3 w-72 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        placeholder="Enter Store Name..."
-        value={storeName}
-        onChange={(e) => setStoreName(e.target.value)}
-      />
+        <div className="store-card">
+          <h1>Create Your Store</h1>
 
-      <button
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg mt-4"
-        onClick={handleCreateStore}
-      >
-        Create Store
-      </button>
+          {/* Store Name */}
+          <div className="input-group">
+            <FaStore />
+            <input
+              type="text"
+              className="store-input"
+              placeholder="Store Name"
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+            />
+          </div>
 
-      {error && <p className="text-red-500 mt-3">{error}</p>}
+          {/* Owner Name */}
+          <div className="input-group">
+            <FaUser />
+            <input
+              type="text"
+              className="store-input"
+              placeholder="Owner Name"
+              value={ownerName}
+              onChange={(e) => setOwnerName(e.target.value)}
+            />
+          </div>
+
+          {/* Phone Number */}
+          <div className="input-group">
+            <FaPhone />
+            <input
+              type="text"
+              className="store-input"
+              placeholder="Phone Number"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
+
+          {/* 📍 Select Store Location */}
+          <h3>Select Store Location</h3>
+          {error && <p className="error-text">{error}</p>}
+          <p><strong>Selected Address:</strong> {address}</p>
+
+          <MapContainer
+            center={[location.lat, location.lng]}
+            zoom={13}
+            style={{ height: "300px", width: "100%", borderRadius: "10px" }}
+            className="custom-map"
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <LocationMarker />
+          </MapContainer>
+
+          {/* Submit Button */}
+          <button className="store-button" onClick={handleCreateStore}>
+            Create Store
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,0 +1,87 @@
+.createstorebody {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f4f4f4;
+  }
+  
+  .create-store-container {
+    width: 400px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .store-card {
+    text-align: center;
+  }
+  
+  .store-card img {
+    width: 80px;
+    margin-bottom: 10px;
+  }
+  
+  .input-group {
+    display: flex;
+    align-items: center;
+    background: #f1f1f1;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+  }
+  
+  .input-group input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    padding-left: 10px;
+    font-size: 16px;
+  }
+  
+  .store-button {
+    width: 100%;
+    background: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .store-button:hover {
+    background: #0056b3;
+  }
+  
+  .map-container {
+    margin-top: 15px;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .error-text {
+    color: red;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  
+/* Cursor pointer for map */
+.leaflet-container {
+    cursor: pointer;
+  }
+  
+  /* Style for store icon at the top */
+  .store-icon-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+  
+  .store-icon-image {
+    width: 60px;
+    height: 60px;
+  }
+  

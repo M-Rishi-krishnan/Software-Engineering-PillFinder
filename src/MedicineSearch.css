@@ -1,0 +1,226 @@
+.MedicineSearch-body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    font-family: 'Inter', sans-serif;
+    background: #f4f7fc;
+    overflow-x: hidden;
+}
+
+.title {
+    color:rgb(255, 255, 255);
+    position: relative;
+    left: 21%;
+}
+
+/* Universal Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Main Layout */
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    height: 100vh;
+    width: 100%;
+    padding: 20px;
+}
+
+/* Navbar */
+.navbar {
+    width: 100%;
+    background: linear-gradient(135deg, #0033cc, #007bff);
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    font-size: 28px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    border: px solid rgb(14, 29, 104);
+}
+
+/* Search Box */
+.search-box {
+    width: 50%;
+    margin: 20px auto;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #0055ff;
+    box-shadow: 0 4px 10px rgba(0, 85, 255, 0.3);
+}
+
+/* Suggestions Dropdown */
+.suggestions {
+    position: absolute;
+    top: 29%;
+    width: 40%;
+    background: rgb(255, 255, 255);
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    margin-top: 5px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.suggestions li {
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    transition: 0.2s;
+}
+
+.suggestions li:hover {
+    background: rgba(0, 123, 255, 0.1);
+}
+
+/* Results Table */
+.results-container {
+    width: 85%;
+    margin-top: 20px;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.medicine-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 17px;
+    border-radius: 8px;
+}
+
+.medicine-table th, 
+.medicine-table td {
+    padding: 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    text-align: left;
+}
+
+.medicine-table th {
+    background: linear-gradient(135deg, #0033cc, #0055ff);
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.medicine-table tr:hover {
+    background: rgba(0, 85, 255, 0.1);
+}
+
+/* No Results Message */
+.no-results {
+    font-size: 18px;
+    color: #d32f2f;
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Error Message */
+.error-msg {
+    font-size: 16px;
+    color: #ff4444;
+    margin-top: 15px;
+}
+
+/* Logout Button */
+.logout-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: #ff4d4d;
+    color: white;
+    padding: 10px 18px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+.logout-btn:hover {
+    background: #cc0000;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 1024px) {
+    .search-box {
+        width: 70%;
+    }
+    .results-container {
+        width: 90%;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .navbar {
+        font-size: 24px;
+        padding: 15px 0;
+    }
+    
+    .search-box {
+        width: 90%;
+    }
+
+    .medicine-table th, .medicine-table td {
+        padding: 10px;
+        font-size: 15px;
+    }
+
+    .logout-btn {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .navbar {
+        font-size: 20px;
+        padding: 10px 0;
+    }
+    
+    .search-box {
+        width: 100%;
+    }
+
+    .medicine-table th, .medicine-table td {
+        padding: 8px;
+        font-size: 14px;
+    }
+
+    .logout-btn {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+.location-display
+{
+    color: rgb(5, 5, 5);
+    margin-top: 20px;
+    background-color: rgb(250, 242, 242);
+    padding: 5px;
+    text-align: center;
+}

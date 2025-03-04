@@ -1,35 +1,54 @@
 import React, { useEffect, useState } from "react";
+import "./AdminPanel.css";
+import { useNavigate } from "react-router-dom";
 
 const AdminPanel = () => {
-  const [stores, setStores] = useState([]); // ✅ Holds all stores
-  const [searchQuery, setSearchQuery] = useState(""); // ✅ Holds user input for search
-  const [filteredStores, setFilteredStores] = useState([]); // ✅ Stores that match the search
+  const [stores, setStores] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredStores, setFilteredStores] = useState([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-
-  // ✅ Add Admin Form State
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
+    fetchStores();
+    fetchUsers();
+  }, []);
+
+  const fetchStores = () => {
     fetch("http://127.0.0.1:5000/get-all-stores")
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setStores(data.stores);
-          setFilteredStores(data.stores); // ✅ Initially, show all stores
+          setFilteredStores(data.stores);
         } else {
           setError(data.message);
         }
       })
       .catch(() => setError("Failed to fetch stores."));
-  }, []);
+  };
 
-  // ✅ Handle Search (Filter stores starting with the input)
+  const fetchUsers = () => {
+    fetch("http://127.0.0.1:5000/get-all-users")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setUsers(data.users);
+        } else {
+          setError(data.message);
+        }
+      })
+      .catch(() => setError("Failed to fetch users."));
+  };
+
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (!query.trim()) {
-      setFilteredStores(stores); // Show all stores if search is empty
+      setFilteredStores(stores);
       return;
     }
 
@@ -39,20 +58,21 @@ const AdminPanel = () => {
     setFilteredStores(filtered);
   };
 
-  // ✅ Delete Store Function
-  const handleDeleteStore = async (storeId) => {
+  // ✅ Delete Store + Owner
+  const handleDeleteStore = async (storeId, ownerEmail) => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-store", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId }),
+        body: JSON.stringify({ storeId, ownerEmail }),
       });
 
       const data = await response.json();
       if (data.success) {
         setStores(stores.filter((store) => store.id !== storeId));
         setFilteredStores(filteredStores.filter((store) => store.id !== storeId));
-        setMessage("Store deleted successfully!");
+        setUsers(users.filter((user) => user.email !== ownerEmail));
+        setMessage("Store and its owner deleted successfully!");
       } else {
         setError(data.message);
       }
@@ -61,14 +81,60 @@ const AdminPanel = () => {
     }
   };
 
-  // ✅ Handle Add Admin
+  // ✅ Delete User + Store (if Owner)
+  const handleDeleteUser = async (userId, role, storeId) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role, storeId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUsers(users.filter((user) => user.id !== userId));
+        if (role === "owner") {
+          setStores(stores.filter((store) => store.id !== storeId));
+          setFilteredStores(filteredStores.filter((store) => store.id !== storeId));
+          setMessage("Owner and their store deleted successfully!");
+        } else {
+          setMessage("User deleted successfully!");
+        }
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("Error deleting user.");
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/delete-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setUsers(users.filter((user) => user.id !== adminId));
+        setMessage("Admin deleted successfully!");
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("Error deleting admin.");
+    }
+  };
+
   const handleAddAdmin = async () => {
     if (!newAdminEmail || !newAdminPassword) {
       setError("Admin email and password are required.");
       return;
     }
 
-    const adminEmail = localStorage.getItem("email"); // ✅ Get logged-in admin email
+    const adminEmail = localStorage.getItem("email");
 
     try {
       const response = await fetch("http://127.0.0.1:5000/add-admin", {
@@ -77,7 +143,7 @@ const AdminPanel = () => {
         body: JSON.stringify({
           email: newAdminEmail,
           password: newAdminPassword,
-          adminEmail, // ✅ Ensure only an admin can add another admin
+          adminEmail,
         }),
       });
 
@@ -94,22 +160,31 @@ const AdminPanel = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    navigate("/");
+  };
+
   return (
-    <div className="container">
-      <h1>Admin Panel</h1>
+    <div className="page-container">
+      <div className="admin-container">
+        <div className="admin-header">
+          <h1 className="head1">ADMIN PANEL</h1>
+          <button className="logout-btn1" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
 
-      {/* ✅ Search Bar */}
-      <input
-        type="text"
-        placeholder="Search stores..."
-        value={searchQuery}
-        onChange={(e) => handleSearch(e.target.value)}
-        className="search-bar"
-      />
+        <input
+          type="text"
+          placeholder="Search stores..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          className="search-bar"
+        />
 
-      {/* ✅ Display Stores */}
-      <div className="store-list">
-        {filteredStores.length > 0 ? (
+        <div className="store-list">
+          <h2 className="head2">Manage Stores</h2>
           <table>
             <thead>
               <tr>
@@ -124,38 +199,58 @@ const AdminPanel = () => {
                   <td>{store.name}</td>
                   <td>{store.owner_email}</td>
                   <td>
-                    <button onClick={() => handleDeleteStore(store.id)}>Delete Store</button>
+                    <button className="delete-btn" onClick={() => handleDeleteStore(store.id, store.owner_email)}>
+                      Delete Store & Owner
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : (
-          <p>No stores found.</p>
-        )}
+        </div>
+
+        <div className="user-list">
+          <h2 className="head2">Manage Users</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.email}</td>
+                  <td>{user.role}</td>
+                  <td>
+                    {user.role === "owner" ? (
+                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role, user.store_id)}>
+                        Delete Owner & Store
+                      </button>
+                    ) : (
+                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role)}>
+                        Delete User
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h2 className="head2">Add New Admin</h2>
+        <div className="add-admin">
+          <input type="email" placeholder="Admin Email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
+          <input type="password" placeholder="Admin Password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} />
+          <button onClick={handleAddAdmin}>Add Admin</button>
+        </div>
+
+        {message && <p className="success">{message}</p>}
+        {error && <p className="error">{error}</p>}
       </div>
-
-      {/* ✅ Add Admin Section */}
-      <h2>Add New Admin</h2>
-      <input
-        type="email"
-        placeholder="New Admin Email"
-        value={newAdminEmail}
-        onChange={(e) => setNewAdminEmail(e.target.value)}
-        className="admin-input"
-      />
-      <input
-        type="password"
-        placeholder="New Admin Password"
-        value={newAdminPassword}
-        onChange={(e) => setNewAdminPassword(e.target.value)}
-        className="admin-input"
-      />
-      <button onClick={handleAddAdmin}>Add Admin</button>
-
-      {/* ✅ Messages */}
-      {message && <p className="success">{message}</p>}
-      {error && <p className="error">{error}</p>}
     </div>
   );
 };
