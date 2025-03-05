@@ -15,7 +15,7 @@ function App() {
         <Route path="/medicine-search" element={<ProtectedRoute><MedicineSearch /></ProtectedRoute>} />
         <Route path="/create-store" element={<ProtectedRoute><CreateStore /></ProtectedRoute>} />
         <Route path="/add-medicine" element={<ProtectedRoute><AddMedicine /></ProtectedRoute>} />
-        <Route path="/admin-panel" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+        <Route path="/admin-panel" element={<AdminPanel />} />
       </Routes>
     </Router>
   );

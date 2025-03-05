@@ -11,6 +11,8 @@ const AdminPanel = () => {
   const [message, setMessage] = useState("");
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [newAdminAppPassword, setNewAdminAppPassword] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -108,6 +110,7 @@ const AdminPanel = () => {
     }
   };
 
+  // ✅ Delete Admin
   const handleDeleteAdmin = async (adminId) => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-admin", {
@@ -129,29 +132,36 @@ const AdminPanel = () => {
   };
 
   const handleAddAdmin = async () => {
-    if (!newAdminEmail || !newAdminPassword) {
-      setError("Admin email and password are required.");
+    const adminEmail = localStorage.getItem("email"); // Get logged-in admin's email
+  
+    if (!adminEmail) {
+      setError("Admin email is missing. Please log in again.");
       return;
     }
-
-    const adminEmail = localStorage.getItem("email");
-
+  
+    if (!newAdminEmail || !newAdminPassword || !newAdminAppPassword) {
+      setError("Admin email, password, and app password are required.");
+      return;
+    }
+  
     try {
       const response = await fetch("http://127.0.0.1:5000/add-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          adminEmail,  // 🔹 Send logged-in admin's email
           email: newAdminEmail,
           password: newAdminPassword,
-          adminEmail,
+          appPassword: newAdminAppPassword,
         }),
       });
-
+  
       const data = await response.json();
       if (data.success) {
         setMessage("New admin added successfully!");
         setNewAdminEmail("");
         setNewAdminPassword("");
+        setNewAdminAppPassword("");
       } else {
         setError(data.message);
       }
@@ -159,6 +169,7 @@ const AdminPanel = () => {
       setError("Error adding admin.");
     }
   };
+  
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
@@ -170,9 +181,7 @@ const AdminPanel = () => {
       <div className="admin-container">
         <div className="admin-header">
           <h1 className="head1">ADMIN PANEL</h1>
-          <button className="logout-btn1" onClick={handleLogout}>
-            Logout
-          </button>
+          <button className="logout-btn1" onClick={handleLogout}>Logout</button>
         </div>
 
         <input
@@ -225,12 +234,12 @@ const AdminPanel = () => {
                   <td>{user.email}</td>
                   <td>{user.role}</td>
                   <td>
-                    {user.role === "owner" ? (
-                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role, user.store_id)}>
-                        Delete Owner & Store
+                    {user.role === "admin" ? (
+                      <button className="delete-btn" onClick={() => handleDeleteAdmin(user.id)}>
+                        Delete Admin
                       </button>
                     ) : (
-                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role)}>
+                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role, user.store_id)}>
                         Delete User
                       </button>
                     )}
@@ -245,6 +254,7 @@ const AdminPanel = () => {
         <div className="add-admin">
           <input type="email" placeholder="Admin Email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
           <input type="password" placeholder="Admin Password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} />
+          <input type="password" placeholder="Admin Gmail App Password" value={newAdminAppPassword} onChange={(e) => setNewAdminAppPassword(e.target.value)} />
           <button onClick={handleAddAdmin}>Add Admin</button>
         </div>
 

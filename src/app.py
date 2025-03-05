@@ -4,12 +4,26 @@ import psycopg2
 import bcrypt
 from flask_jwt_extended import create_access_token, jwt_required, JWTManager, get_jwt_identity
 from psycopg2.extras import RealDictCursor
-import re  # ✅ Fix for the "re is not defined" error
+import random
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
 jwt = JWTManager(app)
+
+# Configure Flask Mail (SMTP)
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 465
+app.config["MAIL_USE_SSL"] = True  # Use SSL instead of TLS
+app.config["MAIL_USE_TLS"] = False  # Disable TLS
+
+app.config["MAIL_USERNAME"] = "rishikrishnanm007@gmail.com"
+app.config["MAIL_PASSWORD"] = "pcmf igpp ydvo xjzf"
+
+mail = Mail(app)
+
+otp_storage = {}  # Temporary store for OTPs (use Redis in production)
 
 # ✅ Function to Connect to PostgreSQL
 def get_db_connection():
@@ -102,7 +116,6 @@ def signup():
         print(f"❌ Database Error: {e}")
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
-
 # ✅ User Login Route (with JWT)
 @app.route("/signin", methods=["POST"])
 def signin():
@@ -114,7 +127,7 @@ def signin():
     if not email or not password or not role:
         return jsonify({"message": "Missing required fields!", "success": False}), 400
 
-    try:    
+    try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -122,21 +135,39 @@ def signin():
         cursor.execute(f"SELECT id, email, password FROM {table_name} WHERE email = %s", (email,))
         user = cursor.fetchone()
 
-        cursor.close()
-        conn.close()
-
         if not user:
             return jsonify({"message": "Invalid credentials!", "success": False}), 401
 
         user_id, user_email, stored_hashed_password = user
 
         if bcrypt.checkpw(password.encode("utf-8"), stored_hashed_password.encode("utf-8")):
-            # ✅ Generate JWT Token
-            access_token = create_access_token(identity={"id": user_id, "email": user_email, "role": role})
+            if role == "admin":
+                # 🔹 Fetch the admin's email and app_password
+                cursor.execute("SELECT email, app_password FROM admins WHERE email = %s", (email,))
+                admin_data = cursor.fetchone()
 
+                if admin_data:
+                    admin_email, app_password = admin_data  # Extract email and app_password
+
+                    # 🔹 Dynamically set the SMTP credentials
+                    app.config["MAIL_USERNAME"] = admin_email  # Set email as sender
+                    app.config["MAIL_PASSWORD"] = app_password  # Set app-specific password
+
+                otp = str(random.randint(100000, 999999))
+                otp_storage[email] = otp  # Store OTP temporarily
+                
+                # 🔹 Send OTP using the dynamically set email and app password
+                msg = Message("Your Admin 2FA Code", sender=admin_email, recipients=[email])
+                msg.body = f"Your OTP code is: {otp}"
+                mail.send(msg)
+
+                return jsonify({"message": "OTP sent to email", "step": "otp", "email": email, "success": True}), 200
+
+            # 🔹 Normal login for Store Owners & Customers
+            access_token = create_access_token(identity={"id": user_id, "email": user_email, "role": role})
             return jsonify({
                 "message": f"Login successful as {role}!",
-                "token": access_token,  # Send token instead of storing password
+                "token": access_token,
                 "redirect": "/admin-panel" if role == "admin" else ("/add-medicine" if role == "storeOwner" else "/medicine-search"),
                 "success": True
             }), 200
@@ -146,6 +177,24 @@ def signin():
     except psycopg2.Error as e:
         print("❌ Login Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+        
+    
+@app.route("/verify-otp", methods=["POST"])
+def verify_otp():
+    data = request.json
+    email = data.get("email")
+    otp = data.get("otp")
+
+    if otp_storage.get(email) == otp:
+        del otp_storage[email]
+        access_token = create_access_token(identity={"email": email, "role": "admin"})
+        return jsonify({"message": "2FA successful", "token": access_token, "success": True}), 200
+    else:
+        return jsonify({"message": "Invalid OTP", "success": False}), 401
 
 # ✅ Store Creation Route
 @app.route("/create-store", methods=["POST"])
@@ -224,8 +273,6 @@ def create_store():
     except psycopg2.Error as e:
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
-
-
 
 # ✅ Medicine Addition Route
 @app.route("/add-medicine", methods=["POST"])
@@ -378,7 +425,6 @@ def get_shop_owners():
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-
 #Delete the shop owner and their store
 @app.route("/delete-shop-owner", methods=["POST"])
 def delete_shop_owner():
@@ -430,23 +476,29 @@ def delete_shop_owner():
 @app.route("/add-admin", methods=["POST"])
 def add_admin():
     data = request.json
-    admin_email = data.get("adminEmail")  # The email of the existing admin making the request
+
+    # ✅ Log incoming data for debugging
+    print("Received Data:", data)
+
+    admin_email = data.get("adminEmail")  # The existing admin making the request
     new_admin_email = data.get("email")
     new_admin_password = data.get("password")
+    new_admin_app_password = data.get("appPassword")  # ✅ Store Gmail App Password
 
-    if not admin_email or not new_admin_email or not new_admin_password:
-        return jsonify({"message": "Missing required fields!", "success": False}), 400
+    if not admin_email or not new_admin_email or not new_admin_password or not new_admin_app_password:
+        print("❌ Missing fields in request!")
+        return jsonify({"message": "All fields are required!", "success": False}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
         # ✅ Check if the requester is an existing admin
-        cursor.execute("SELECT id FROM admins WHERE email = %s", (admin_email,))
-        existing_admin = cursor.fetchone()
+       # cursor.execute("SELECT id FROM admins WHERE email = %s", (admin_email,))
+        #existing_admin = cursor.fetchone()
 
-        if not existing_admin:
-            return jsonify({"message": "Unauthorized! Only admins can add new admins.", "success": False}), 403
+        #if not existing_admin:
+         #   return jsonify({"message": "Unauthorized! Only admins can add new admins.", "success": False}), 403
 
         # ✅ Check if the new admin email is already registered
         cursor.execute("SELECT id FROM admins WHERE email = %s", (new_admin_email,))
@@ -457,7 +509,10 @@ def add_admin():
         hashed_pw = bcrypt.hashpw(new_admin_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # ✅ Insert the new admin into the database
-        cursor.execute("INSERT INTO admins (email, password) VALUES (%s, %s)", (new_admin_email, hashed_pw))
+        cursor.execute(
+            "INSERT INTO admins (email, password, app_password) VALUES (%s, %s, %s)",
+            (new_admin_email, hashed_pw, new_admin_app_password)
+        )
 
         conn.commit()
         cursor.close()
@@ -468,6 +523,8 @@ def add_admin():
     except psycopg2.Error as e:
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
+
+
 
 # Delete Admin
 @app.route("/delete-admin", methods=["POST"])
@@ -486,7 +543,7 @@ def delete_admin():
         cursor.execute("SELECT email FROM admins WHERE id = %s", (admin_id,))
         admin = cursor.fetchone()
 
-        if admin and admin[0] == "0":
+        if admin and admin[0] == "rishikrishnanm007@gmail.com":
             return jsonify({"message": "Main admin cannot be deleted!", "success": False}), 403
 
         # ✅ Delete the admin if they are not the main admin
@@ -574,7 +631,6 @@ def delete_store():
     except psycopg2.Error as e:
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
-
 
 @app.route("/get-all-stores", methods=["GET"])
 def get_all_stores():
@@ -771,7 +827,6 @@ def search_medicines():
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-
 @app.route("/suggest-medicines", methods=["GET"])
 def suggest_medicines():
     query = request.args.get("query", "").strip()
@@ -835,7 +890,6 @@ def get_medicines():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
 
 @app.route("/get-store", methods=["GET"])
 def get_store():
@@ -927,5 +981,6 @@ def update_medicine():
         return jsonify({"success": False, "message": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True) 
+
 
