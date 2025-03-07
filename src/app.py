@@ -6,6 +6,9 @@ from flask_jwt_extended import create_access_token, jwt_required, JWTManager, ge
 from psycopg2.extras import RealDictCursor
 import random
 from flask_mail import Mail, Message
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import smtplib
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -18,12 +21,17 @@ app.config["MAIL_PORT"] = 465
 app.config["MAIL_USE_SSL"] = True  # Use SSL instead of TLS
 app.config["MAIL_USE_TLS"] = False  # Disable TLS
 
-app.config["MAIL_USERNAME"] = "rishikrishnanm007@gmail.com"
-app.config["MAIL_PASSWORD"] = "pcmf igpp ydvo xjzf"
 
 mail = Mail(app)
 
 otp_storage = {}  # Temporary store for OTPs (use Redis in production)
+
+limiter = Limiter(
+    key_func=get_remote_address,  # Limits based on client IP
+    app=app,
+    default_limits=["200 per day", "50 per hour"]  # Global limits (adjust as needed)
+)
+
 
 # ✅ Function to Connect to PostgreSQL
 def get_db_connection():
@@ -74,16 +82,7 @@ def signup():
                 return jsonify({"message": "Email already in use!", "success": False}), 400
             
             cursor.execute("INSERT INTO users (email, password) VALUES (%s, %s) RETURNING id", (email, hashed_pw))
-            user_id = cursor.fetchone()[0]
-        
-        # ✅ If admin → Insert into `admins` table (if applicable)
-        elif role == "admin":
-            cursor.execute("SELECT id FROM admins WHERE email = %s", (email,))
-            if cursor.fetchone():
-                return jsonify({"message": "Email already in use!", "success": False}), 400
-            
-            cursor.execute("INSERT INTO admins (email, password) VALUES (%s, %s) RETURNING id", (email, hashed_pw))
-            user_id = cursor.fetchone()[0]
+            user_id = cursor.fetchone()[0]     
         
         else:
             return jsonify({"message": "Invalid role!", "success": False}), 400
@@ -117,7 +116,10 @@ def signup():
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
 # ✅ User Login Route (with JWT)
+# ✅ User Login Route (with JWT)
+# Apply rate limiting to search route
 @app.route("/signin", methods=["POST"])
+@limiter.limit("5 per minute")  # Limit login attempts
 def signin():
     data = request.json
     email = data.get("email")
@@ -132,7 +134,7 @@ def signin():
         cursor = conn.cursor()
 
         table_name = get_table_name(role)
-        cursor.execute(f"SELECT id, email, password FROM {table_name} WHERE email = %s", (email,))
+        cursor.execute("SELECT id, email, password FROM {} WHERE email = %s".format(table_name), (email,))
         user = cursor.fetchone()
 
         if not user:
@@ -140,49 +142,61 @@ def signin():
 
         user_id, user_email, stored_hashed_password = user
 
-        if bcrypt.checkpw(password.encode("utf-8"), stored_hashed_password.encode("utf-8")):
-            if role == "admin":
-                # 🔹 Fetch the admin's email and app_password
-                cursor.execute("SELECT email, app_password FROM admins WHERE email = %s", (email,))
-                admin_data = cursor.fetchone()
+        if not bcrypt.checkpw(password.encode("utf-8"), stored_hashed_password.encode("utf-8")):
+            return jsonify({"message": "Invalid credentials!", "success": False}), 401
 
-                if admin_data:
-                    admin_email, app_password = admin_data  # Extract email and app_password
+        if role == "admin":
+            # 🔹 Fetch the admin's email and app_password from the database
+            cursor.execute("SELECT email, app_password FROM admins WHERE email = %s", (email,))
+            admin_data = cursor.fetchone()
 
-                    # 🔹 Dynamically set the SMTP credentials
-                    app.config["MAIL_USERNAME"] = admin_email  # Set email as sender
-                    app.config["MAIL_PASSWORD"] = app_password  # Set app-specific password
+            if not admin_data:
+                return jsonify({"message": "Admin credentials not found!", "success": False}), 401
 
-                otp = str(random.randint(100000, 999999))
-                otp_storage[email] = otp  # Store OTP temporarily
-                
-                # 🔹 Send OTP using the dynamically set email and app password
-                msg = Message("Your Admin 2FA Code", sender=admin_email, recipients=[email])
-                msg.body = f"Your OTP code is: {otp}"
-                mail.send(msg)
+            admin_email, app_password = admin_data  # Extract email and app_password
+
+            # 🔹 Generate and store OTP
+            otp = str(random.randint(100000, 999999))
+            otp_storage[email] = otp  
+
+            try:
+                # 🔹 Send email using the fetched credentials
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login(admin_email, app_password)
+
+                message = f"Subject: Your Admin 2FA Code\n\nYour OTP code is: {otp}"
+                server.sendmail(admin_email, email, message)
+
+                server.quit()
 
                 return jsonify({"message": "OTP sent to email", "step": "otp", "email": email, "success": True}), 200
 
-            # 🔹 Normal login for Store Owners & Customers
-            access_token = create_access_token(identity={"id": user_id, "email": user_email, "role": role})
-            return jsonify({
-                "message": f"Login successful as {role}!",
-                "token": access_token,
-                "redirect": "/admin-panel" if role == "admin" else ("/add-medicine" if role == "storeOwner" else "/medicine-search"),
-                "success": True
-            }), 200
+            except smtplib.SMTPAuthenticationError:
+                return jsonify({"message": "SMTP authentication failed. Check credentials.", "success": False}), 500
 
-        return jsonify({"message": "Invalid credentials!", "success": False}), 401
+            except Exception as e:
+                return jsonify({"message": f"Error sending email: {str(e)}", "success": False}), 500
+
+        # 🔹 Normal login for Store Owners & Customers
+        access_token = create_access_token(identity={"id": user_id, "email": user_email, "role": role})
+
+        # ✅ Store role in the session
+        return jsonify({
+            "message": f"Login successful as {role}!",
+            "token": access_token,
+            "redirect": "/admin-panel" if role == "admin" else ("/add-medicine" if role == "storeOwner" else "/medicine-search"),
+            "success": True
+        }), 200
 
     except psycopg2.Error as e:
         print("❌ Login Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
+
     finally:
         cursor.close()
         conn.close()
 
-        
-    
 @app.route("/verify-otp", methods=["POST"])
 def verify_otp():
     data = request.json
@@ -195,6 +209,7 @@ def verify_otp():
         return jsonify({"message": "2FA successful", "token": access_token, "success": True}), 200
     else:
         return jsonify({"message": "Invalid OTP", "success": False}), 401
+
 
 # ✅ Store Creation Route
 @app.route("/create-store", methods=["POST"])
@@ -982,5 +997,3 @@ def update_medicine():
 
 if __name__ == "__main__":
     app.run(debug=True) 
-
-
