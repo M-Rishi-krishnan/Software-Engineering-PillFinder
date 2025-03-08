@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaUser, FaUserMd, FaUserShield } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,15 @@ const Login = () => {
   const [step, setStep] = useState(1); // Step 1: Login, Step 2: OTP for Admins
   const [otp, setOtp] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Clear localStorage when the component mounts
+    localStorage.clear();
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("role");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+  }, []);
 
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
@@ -43,14 +52,7 @@ const Login = () => {
           localStorage.setItem("token", data.token);
           localStorage.setItem("email", credentials.email);
           localStorage.setItem("role", role);
-
-          navigate(
-            role === "storeOwner"
-              ? "/add-medicine"
-              : role === "customer"
-              ? "/medicine-search"
-              : "/admin-panel"
-          );
+          navigate(data.redirect, { replace: true }); // Trigger
         }
       } else {
         setError(data.message || "Login failed! Check your credentials.");

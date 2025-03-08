@@ -37,7 +37,7 @@ const CreateStore = () => {
           fetchAddress(newLocation.lat, newLocation.lng);
         },
         (error) => {
-          setError("Click to select location");
+          setError("Click to select location  ");
         }
       );
     } else {

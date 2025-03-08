@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
@@ -119,7 +120,7 @@ def signup():
 # ✅ User Login Route (with JWT)
 # Apply rate limiting to search route
 @app.route("/signin", methods=["POST"])
-@limiter.limit("5 per minute")  # Limit login attempts
+#@limiter.limit("5 per minute")  # Limit login attempts
 def signin():
     data = request.json
     email = data.get("email")

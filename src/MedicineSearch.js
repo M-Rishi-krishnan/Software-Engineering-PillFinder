@@ -117,6 +117,13 @@ const MedicineSearch = () => {
       const response = await fetch(
         `http://127.0.0.1:5000/search-medicines?query=${input}&latitude=${latitude}&longitude=${longitude}`
       );
+
+      if (response.status === 400 || response.status === 404) {
+        setError(data.message || "Error occurred while fetching medicines.");
+        setFilteredMedicines([]);
+      }
+      
+
       const data = await response.json();
   
       console.log("🔄 API Response:", data);
@@ -148,8 +155,12 @@ const MedicineSearch = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("role");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
     navigate("/");
   };
+  
 
   const isSearching = query.trim() !== ""; // ✅ Check if a search is active
 
@@ -191,7 +202,12 @@ const MedicineSearch = () => {
         {error && <p className="error-msg">{error}</p>}
 
        {/* Results Table */}
-<motion.div className="results-container" initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+       <motion.div 
+  className="results-container" 
+  initial={{ y: 30, opacity: 0 }} 
+  animate={{ y: 0, opacity: 1 }} 
+  transition={{ duration: 0.5 }}
+>
   {filteredMedicines.length > 0 ? (
     <table className="medicine-table">
       <thead>
@@ -202,7 +218,7 @@ const MedicineSearch = () => {
           <th>Price</th>
           <th>Store Address</th>
           <th>Store Phone</th>
-          {isSearching && <th>Distance (km)</th>} {/* ✅ Conditionally show column */}
+          {isSearching && <th>Distance (km)</th>} {/* Conditionally show column */}
         </tr>
       </thead>
       <tbody>
@@ -219,13 +235,16 @@ const MedicineSearch = () => {
             <td>${med.price.toFixed(2)}</td>
             <td>{med.store_address}</td>
             <td>{med.store_phone}</td>
-            {isSearching && <td>{med.distance_km} km</td>} {/* ✅ Conditionally show value */}
+            {isSearching && <td>{med.distance_km} km</td>} {/* Conditionally show value */}
           </motion.tr>
         ))}
       </tbody>
     </table>
   ) : (
-    !error && <p className="no-results">No medicines found.</p>
+    !error && (
+      // Display "No medicines found" when there are no results and no error
+      <p className="no-results">No medicines found.</p>
+    )
   )}
 </motion.div>
 
