@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./AdminPanel.css";
 import { useNavigate } from "react-router-dom";
+import { FaExclamationTriangle} from "react-icons/fa";
 
 const AdminPanel = () => {
   const [stores, setStores] = useState([]);
@@ -12,16 +13,29 @@ const AdminPanel = () => {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminAppPassword, setNewAdminAppPassword] = useState("");
+  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
 
   const navigate = useNavigate();
 
   useEffect(() => {
+    const userRole = localStorage.getItem("role");
+    
+    if (!userRole || userRole !== "admin") {
+      setAuthorized(false);
+      setError("Only admins can access this page");
+    } else {
+      setAuthorized(true);
+    }
     fetchStores();
     fetchUsers();
   }, []);
-
+  const token = localStorage.getItem("token");
   const fetchStores = () => {
-    fetch("http://127.0.0.1:5000/get-all-stores")
+    fetch("http://127.0.0.1:5000/get-all-stores", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -35,7 +49,11 @@ const AdminPanel = () => {
   };
 
   const fetchUsers = () => {
-    fetch("http://127.0.0.1:5000/get-all-users")
+    fetch("http://127.0.0.1:5000/get-all-users", {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
@@ -65,7 +83,9 @@ const AdminPanel = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-store", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+         },
         body: JSON.stringify({ storeId, ownerEmail }),
       });
 
@@ -86,9 +106,12 @@ const AdminPanel = () => {
   // ✅ Delete User + Store (if Owner)
   const handleDeleteUser = async (userId, role, storeId) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch("http://127.0.0.1:5000/delete-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+         },
         body: JSON.stringify({ userId, role, storeId }),
       });
 
@@ -115,7 +138,9 @@ const AdminPanel = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+         },
         body: JSON.stringify({ adminId }),
       });
 
@@ -175,6 +200,24 @@ const AdminPanel = () => {
     localStorage.removeItem("isAuthenticated");
     navigate("/");
   };
+
+  if (!authorized) {
+      return (
+        <div className="container">
+          <div className="unauthorized-message">
+            <FaExclamationTriangle size={50} color="#ff6b6b" />
+            <h2>Access Denied</h2>
+            <p>Only admins can access</p>
+            <button 
+              className="return-home-btn" 
+              onClick={() => navigate("/")}
+            >
+              Return to Home
+            </button>
+          </div>
+        </div>
+      );
+    }
 
   return (
     <div className="page-container">

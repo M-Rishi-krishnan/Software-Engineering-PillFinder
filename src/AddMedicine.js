@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AddMedicine.css"; // Import CSS
+import { FaExclamationTriangle} from "react-icons/fa";
 
-const AddMedicine = () => {
+  const AddMedicine = () => {
   const [medicineName, setMedicineName] = useState("");
   const [stock, setStock] = useState("");
   const [price, setPrice] = useState("");
@@ -13,10 +13,19 @@ const AddMedicine = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  
+  const token = localStorage.getItem("token");  
   const email = localStorage.getItem("email"); // Fetch logged-in user's email
+  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
 
   useEffect(() => {
+    const userRole = localStorage.getItem("role");
+    
+    if (!userRole || userRole !== "storeOwner") {
+      setAuthorized(false);
+      setError("Only store owners can access this page");
+    } else {
+      setAuthorized(true);
+    }
     if (!email) {
       setError("User not found. Please log in again.");
       navigate("/");
@@ -56,52 +65,82 @@ const AddMedicine = () => {
     }
   };
 
-  // Add New Medicine
-  const handleSubmit = async () => {
-    setMessage("");
-    setError("");
 
-    if (!medicineName || !stock || !price) {
-      setError("All fields are required.");
-      return;
+// Add New Medicine
+const handleSubmit = async () => {
+  setMessage("");
+  setError("");
+
+  if (!medicineName || !stock || !price) {
+    setError("All fields are required.");
+    return;
+  }
+
+  if (isTokenExpired()) {
+    setError("Session expired. Please login again.");
+    navigate("/");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const response = await fetch("http://127.0.0.1:5000/add-medicine", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}` // FIXED: using backticks
+      },
+      body: JSON.stringify({
+        email,
+        medicineName,
+        stock: parseInt(stock, 10),
+        price: parseFloat(price),
+      }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      setMessage("Medicine added successfully!");
+      setMedicineName("");
+      setStock("");
+      setPrice("");
+      fetchMedicines();
+    } else {
+      setError(data.message || "Failed to add medicine.");
     }
+  } catch (error) {
+    setError("Failed to connect to the server.");
+  } finally {
+    setLoading(false);
+  }
+};
 
-    const requestBody = {
-      email,
-      medicineName,
-      stock: parseInt(stock, 10),
-      price: parseFloat(price),
-    };
+  // In your React component
+const isTokenExpired = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return true;
+  
+  // JWT tokens are in format: header.payload.signature
+  const payload = token.split('.')[1];
+  const decoded = JSON.parse(atob(payload));
+  
+  // Check if the expiration time is past current time
+  return decoded.exp < Date.now() / 1000;
+};
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://127.0.0.1:5000/add-medicine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
+// Use this before making API calls
+if (isTokenExpired()) {
+  // Redirect to login page
+  navigate("/");
+}
 
-      const data = await response.json();
-      if (data.success) {
-        setMessage("Medicine added successfully!");
-        setMedicineName("");
-        setStock("");
-        setPrice("");
-        fetchMedicines(); // Refresh list
-      } else {
-        setError(data.message || "Failed to add medicine.");
-      }
-    } catch (error) {
-      setError("Failed to connect to the server.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Update Medicine (Stock & Price)
   const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
     setError("");
     setMessage("");
+
+    const token = localStorage.getItem("token"); // Get token from local storage
 
     const requestBody = {
       email,
@@ -113,7 +152,11 @@ const AddMedicine = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/update-medicine", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // Use backticks for interpolation
+
+        },
         body: JSON.stringify(requestBody),
       });
 
@@ -129,12 +172,30 @@ const AddMedicine = () => {
     }
   };
 
+  
   // Handle Logout
   const handleLogout = () => {
     localStorage.clear();
     navigate("/");
   };
 
+  if (!authorized) {
+    return (
+      <div className="container">
+        <div className="unauthorized-message">
+          <FaExclamationTriangle size={50} color="#ff6b6b" />
+          <h2>Access Denied</h2>
+          <p>Only storeOwners can access</p>
+          <button 
+            className="return-home-btn" 
+            onClick={() => navigate("/")}
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container">
       {/* Navbar */}
@@ -179,6 +240,7 @@ const AddMedicine = () => {
         {message && <p className="success-msg">{message}</p>}
 
         {/* Medicine List */}
+        
         <h2 className="medicine-list-heading">Available Medicines</h2>
         <div className="medicine-list">
           {medicines.length > 0 ? (

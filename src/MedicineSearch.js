@@ -13,6 +13,12 @@ const MedicineSearch = () => {
   const [locationError, setLocationError] = useState(""); 
   const navigate = useNavigate();
 
+  const userRole = localStorage.getItem("role");
+
+  const handleAddMedicineClick = () => {
+    navigate("/add-medicine");
+  };
+
   useEffect(() => {
     if (!localStorage.getItem("isAuthenticated")) {
       navigate("/");
@@ -169,7 +175,18 @@ const MedicineSearch = () => {
       <div className="container">
         <motion.div className="navbar" initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
           <h1 className="title">Find Your Medicine</h1>
+          <div className="nav-buttons">
+            {/* Only show Add Medicine button if user is a store owner */}
+            {userRole === "customer" && (
+              <button 
+                onClick={handleAddMedicineClick} 
+                className="add-medicine-btn"
+              >
+                Add Medicine
+              </button>
+            )}
           <button onClick={handleLogout} className="logout-btn">Logout</button>
+          </div>
         </motion.div>
 
         {userLocation ? (

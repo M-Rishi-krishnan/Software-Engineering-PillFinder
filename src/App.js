@@ -12,6 +12,7 @@ import CreateStore from "./CreateStore";
 import AddMedicine from "./AddMedicine";
 import AdminPanel from "./AdminPanel";
 
+
 function App() {
   const [userRole, setUserRole] = useState(localStorage.getItem('role') || '');
 
@@ -40,11 +41,9 @@ function AppContent({ userRole }) {
 
   useEffect(() => {
     const currentPath = location.pathname;
-
-    if (userRole === 'storeOwner' && currentPath !== '/add-medicine' ) {
-      navigate('/');
-    } else if (userRole === 'admin' && currentPath !== '/admin-panel') {
-      navigate('/');
+    
+    if (userRole === 'storeOwner' && currentPath !== '/add-medicine' ){
+      navigate('/admin-panel');
     } else if (userRole === 'customer' && currentPath !== '/medicine-search') {
       navigate('/');
     }
@@ -57,6 +56,7 @@ function AppContent({ userRole }) {
       <Route path="/create-store" element={<CreateStore />} />
       <Route path="/add-medicine" element={<AddMedicine />} />
       <Route path="/admin-panel" element={<AdminPanel />} />
+
     </Routes>
   );
 }

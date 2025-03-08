@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaf
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./CreateStore.css";
-import { FaStore, FaUser, FaPhone } from "react-icons/fa";
+import { FaStore, FaUser, FaPhone ,FaExclamationTriangle} from "react-icons/fa";
 
 // Custom marker icon
 const storeIconUrl = "https://cdn-icons-png.flaticon.com/512/4320/4320337.png";
@@ -21,10 +21,20 @@ const CreateStore = () => {
   const [error, setError] = useState("");
   const [location, setLocation] = useState({ lat: 28.6139, lng: 77.209 }); // Default: New Delhi
   const [address, setAddress] = useState("Default location: New Delhi"); 
+  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
 
   const navigate = useNavigate();
 
   useEffect(() => {
+    const userRole = localStorage.getItem("role");
+    
+    if (!userRole || userRole !== "storeOwner") {
+      setAuthorized(false);
+      setError("Only storeOwners can access this page");
+     
+    } else {
+      setAuthorized(true);
+    }
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -81,7 +91,8 @@ const CreateStore = () => {
       setError("All fields are required.");
       return;
     }
-  
+    
+    const token = localStorage.getItem("token");
     const requestBody = {
       email: localStorage.getItem("email"),
       storeName,
@@ -97,7 +108,8 @@ const CreateStore = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/create-store", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` },
         body: JSON.stringify(requestBody),
       });
   
@@ -116,7 +128,26 @@ const CreateStore = () => {
     }
   };
   
-  
+   // Render unauthorized message if not authorized
+   if (!authorized) {
+    return (
+      <div className="createstorebody">
+        <div className="create-store-container">
+          <div className="unauthorized-message">
+            <FaExclamationTriangle size={50} color="#ff6b6b" />
+            <h2>Access Denied</h2>
+            <p>Only storeOwners can access</p>
+            <button 
+              className="store-button" 
+              onClick={() => navigate("/")}
+            >
+              Return to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
 
   return (

@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { FaUser, FaUserMd, FaUserShield } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
+
 
 const Login = () => {
   const [role, setRole] = useState("customer");
@@ -35,6 +37,8 @@ const Login = () => {
 
     const url = isSignUp ? "http://127.0.0.1:5000/signup" : "http://127.0.0.1:5000/signin";
 
+    
+    
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -52,6 +56,7 @@ const Login = () => {
           localStorage.setItem("token", data.token);
           localStorage.setItem("email", credentials.email);
           localStorage.setItem("role", role);
+          console.log("Token payload:", JSON.parse(atob(data.token.split('.')[1])));
           navigate(data.redirect, { replace: true }); // Trigger
         }
       } else {

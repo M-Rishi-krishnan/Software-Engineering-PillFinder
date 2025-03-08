@@ -1,19 +1,24 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
 import bcrypt
-from flask_jwt_extended import create_access_token, jwt_required, JWTManager, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, JWTManager, get_jwt_identity ,get_jwt
 from psycopg2.extras import RealDictCursor
 import random
 from flask_mail import Mail, Message
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import smtplib
+from flask_principal import Principal, Identity, AnonymousIdentity, identity_changed
+from flask_principal import RoleNeed, Permission, identity_loaded, UserNeed
+from functools import wraps
+from flask_login import current_user
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
+app.config["SECRET_KEY"] = "supersecuresecret"  # For sessions
+
 jwt = JWTManager(app)
 
 # Configure Flask Mail (SMTP)
@@ -21,6 +26,12 @@ app.config["MAIL_SERVER"] = "smtp.gmail.com"
 app.config["MAIL_PORT"] = 465
 app.config["MAIL_USE_SSL"] = True  # Use SSL instead of TLS
 app.config["MAIL_USE_TLS"] = False  # Disable TLS
+
+principals = Principal(app)
+# Define permissions
+admin_permission = Permission(RoleNeed('admin'))
+store_owner_permission = Permission(RoleNeed('storeOwner'))
+customer_permission = Permission(RoleNeed('customer'))
 
 
 mail = Mail(app)
@@ -32,6 +43,74 @@ limiter = Limiter(
     app=app,
     default_limits=["200 per day", "50 per hour"]  # Global limits (adjust as needed)
 )
+
+
+
+# Add a simple User class if you don't have one
+class User:
+    def __init__(self, id, role):
+        self.id = id
+        self.role = role
+        self.is_authenticated = True
+
+@app.route("/test-auth", methods=["POST"])
+def test_auth():
+    auth_header = request.headers.get('Authorization')
+    return jsonify({
+        "success": True,
+        "message": "Auth test successful",
+        "auth_header": auth_header,
+        "has_bearer": auth_header.startswith("Bearer ") if auth_header else False,
+        "token": auth_header.replace("Bearer ", "") if auth_header and auth_header.startswith("Bearer ") else None
+    }), 200
+
+
+@identity_loaded.connect_via(app)
+def on_identity_loaded(sender, identity):
+    # Set the identity user object
+    if hasattr(current_user, 'id'):
+        identity.user = current_user
+
+    # Add the UserNeed to the identity
+    if hasattr(current_user, 'id') and current_user.is_authenticated:
+        identity.provides.add(UserNeed(current_user.id))
+
+    # Add role to the identity
+    if hasattr(current_user, 'role'):
+        identity.provides.add(RoleNeed(current_user.role))
+
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    if isinstance(user, dict):
+        # Create a new dictionary with string values
+        return {
+            "id": str(user.get("id", "")),
+            "email": str(user.get("email", "")),
+            "role": str(user.get("role", ""))
+        }
+    return str(user)  # Ensure non-dict values are also strings
+
+
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]  # This will be the user_id as a string
+    
+    # Get additional claims
+    email = jwt_data.get("email", "")
+    role = jwt_data.get("role", "")
+    
+    # Create user object
+    user = {"id": identity, "email": email, "role": role, "is_authenticated": True}
+    
+    # Set up Flask-Principal identity
+    identity_obj = Identity(identity)
+    identity_obj.provides.add(RoleNeed(role))
+    identity_changed.send(app, identity=identity_obj)
+    
+    return user
+
+
+
 
 
 # ✅ Function to Connect to PostgreSQL
@@ -180,8 +259,10 @@ def signin():
                 return jsonify({"message": f"Error sending email: {str(e)}", "success": False}), 500
 
         # 🔹 Normal login for Store Owners & Customers
-        access_token = create_access_token(identity={"id": user_id, "email": user_email, "role": role})
-
+        access_token = create_access_token(
+        identity=str(user_id),  # Convert ID to string as main identity
+        additional_claims={"email": user_email, "role": role})
+        print("Generated token:", access_token)
         # ✅ Store role in the session
         return jsonify({
             "message": f"Login successful as {role}!",
@@ -198,6 +279,48 @@ def signin():
         cursor.close()
         conn.close()
 
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        jwt_claims = get_jwt()  # Get the JWT claims
+        role = jwt_claims.get("role")
+        
+        if role != "admin":
+            return jsonify({"message": "Admin access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def store_owner_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        jwt_claims = get_jwt()  # Get the JWT claims
+        role = jwt_claims.get("role")
+        
+        if role != "storeOwner":
+            return jsonify({"message": "Store owner access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def customer_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        jwt_claims = get_jwt()  # Get the JWT claims
+        role = jwt_claims.get("role")
+        
+        if role != "customer":
+            return jsonify({"message": "Customer access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+
 @app.route("/verify-otp", methods=["POST"])
 def verify_otp():
     data = request.json
@@ -206,7 +329,10 @@ def verify_otp():
 
     if otp_storage.get(email) == otp:
         del otp_storage[email]
-        access_token = create_access_token(identity={"email": email, "role": "admin"})
+        access_token = create_access_token(
+            identity=email,  # String identity
+            additional_claims={"role": "admin"}  # Add role as claim
+        )
         return jsonify({"message": "2FA successful", "token": access_token, "success": True}), 200
     else:
         return jsonify({"message": "Invalid OTP", "success": False}), 401
@@ -214,6 +340,8 @@ def verify_otp():
 
 # ✅ Store Creation Route
 @app.route("/create-store", methods=["POST"])
+@jwt_required
+@store_owner_required
 def create_store():
     data = request.json
     print("📥 Received Data:", data)  # Debugging log
@@ -290,19 +418,47 @@ def create_store():
         print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+@jwt.unauthorized_loader
+def unauthorized_callback(error):
+    print(f"Unauthorized: {error}")
+    return jsonify({"success": False, "message": f"Missing token: {error}"}), 401
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    print("Token has expired")
+    return jsonify({"success": False, "message": "Token has expired"}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    print(f"Invalid token: {error}")
+    return jsonify({"success": False, "message": f"Invalid token: {error}"}), 401
+    
+
+
 # ✅ Medicine Addition Route
 @app.route("/add-medicine", methods=["POST"])
+@jwt_required()
+@store_owner_required
 def add_medicine():
-    data = request.json
-    email = data.get("email")
-    medicine_name = data.get("medicineName")
-    stock = data.get("stock")
-    price = data.get("price")
-
-    if not email or not medicine_name or stock is None or price is None:
-        return jsonify({"success": False, "message": "All fields are required"}), 400
-
     try:
+        current_user = get_jwt_identity()
+        print("JWT Identity:", current_user)
+        jwt_claims = get_jwt()  # Get the JWT claims
+        role = jwt_claims.get("role")
+        if role != "storeOwner":
+            return jsonify({"success": False, "message": "Store owner access required"}), 403
+        # Check if user is a store owner
+        
+        data = request.json
+        print("Request data:", data)
+        email = data.get("email")
+        medicine_name = data.get("medicineName")
+        stock = data.get("stock")
+        price = data.get("price")
+    
+        if not email or not medicine_name or stock is None or price is None:
+            return jsonify({"success": False, "message": "All fields are required"}), 400
+    
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -366,6 +522,7 @@ def add_medicine():
         return jsonify({"success": True, "message": "Medicine added/updated successfully"}), 201
 
     except Exception as e:
+        print("Error in add_medicine:", str(e))
         return jsonify({"success": False, "message": str(e)}), 500
 
 # Medicine Search 
@@ -418,6 +575,8 @@ def search_medicine():
 
 #View all shop owners
 @app.route("/get-shop-owners", methods=["GET"])
+@jwt_required()
+@admin_required
 def get_shop_owners():
     try:
         conn = get_db_connection()
@@ -443,6 +602,8 @@ def get_shop_owners():
 
 #Delete the shop owner and their store
 @app.route("/delete-shop-owner", methods=["POST"])
+@jwt_required()
+@admin_required
 def delete_shop_owner():
     data = request.json
     owner_id = data.get("ownerId")
@@ -490,6 +651,8 @@ def delete_shop_owner():
 
 #Add Admins
 @app.route("/add-admin", methods=["POST"])
+@jwt_required()
+@admin_required
 def add_admin():
     data = request.json
 
@@ -544,6 +707,8 @@ def add_admin():
 
 # Delete Admin
 @app.route("/delete-admin", methods=["POST"])
+@jwt_required()
+@admin_required
 def delete_admin():
     data = request.json
     admin_id = data.get("adminId")
@@ -605,6 +770,8 @@ def search_stores():
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @app.route("/delete-store", methods=["POST"])
+@jwt_required()
+@admin_required
 def delete_store():
     data = request.json
     store_id = data.get("storeId")
@@ -702,6 +869,8 @@ def get_all_users():
 
 #Delete User from admin
 @app.route("/delete-user", methods=["POST"])
+@jwt_required()
+@admin_required
 def delete_user():
     data = request.json
     user_id = data.get("userId")
