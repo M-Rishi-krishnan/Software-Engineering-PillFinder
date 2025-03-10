@@ -169,19 +169,64 @@ tr:hover {
 }
 
 .unauthorized-message {
+  margin: 12%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: white;
-  padding: 2rem;
+  padding: 90px;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
 .unauthorized-message h2 {
-  color: #ff6b6b;
+  color: #bd0606a6;
+  margin-top: 1rem;
+}
+
+.unauthorized-message p {
+  margin: 1rem 0;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.medicine-list {
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+.medicine-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.medicine-list th, .medicine-list td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.medicine-list th {
+  background-color: #f2f2f2;
+}
+
+.unauthorized-message {
+  margin: 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  padding: 90px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.unauthorized-message h2 {
+  color: #bd0606a6;
   margin-top: 1rem;
 }
 

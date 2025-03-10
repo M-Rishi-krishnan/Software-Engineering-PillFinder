@@ -87,12 +87,18 @@ const CreateStore = () => {
   };
 
   const handleCreateStore = async () => {
+    
     if (!storeName.trim() || !ownerName.trim() || !phone.trim() || location.lat == null || location.lng == null) {
       setError("All fields are required.");
       return;
     }
     
     const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Please log in first");
+      navigate("/login");
+      return;
+  }
     const requestBody = {
       email: localStorage.getItem("email"),
       storeName,
@@ -220,7 +226,7 @@ const CreateStore = () => {
         </div>
       </div>
     </div>
-  );
+  ); 
 };
 
 export default CreateStore;

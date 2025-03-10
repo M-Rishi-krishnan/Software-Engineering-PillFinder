@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
@@ -171,23 +172,32 @@ def signup():
         cursor.close()
         conn.close()
 
+         # ✅ ADDED: Create token after successful signup
+        access_token = create_access_token(
+            identity=str(user_id),
+            additional_claims={"email": email, "role": role}
+        )
+
         # ✅ Redirect Based on Role
         if role == "storeOwner":
             return jsonify({
                 "message": "Account created! Please create your store.",
                 "redirect": "/create-store",
+                "token": access_token,
                 "success": True
             }), 201
         elif role == "customer":
             return jsonify({
                 "message": "Account created! Redirecting to Medicine Search.",
                 "redirect": "/medicine-search",
+                "token": access_token,
                 "success": True
             }), 201
         elif role == "admin":
             return jsonify({
                 "message": "Account created! Redirecting to Admin Dashboard.",
                 "redirect": "/admin-dashboard",
+                "token": access_token,
                 "success": True
             }), 201
 
@@ -340,7 +350,7 @@ def verify_otp():
 
 # ✅ Store Creation Route
 @app.route("/create-store", methods=["POST"])
-@jwt_required
+@jwt_required()
 @store_owner_required
 def create_store():
     data = request.json

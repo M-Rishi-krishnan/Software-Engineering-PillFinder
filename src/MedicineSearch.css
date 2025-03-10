@@ -2,7 +2,7 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     font-family: 'Inter', sans-serif;
     background: #f4f7fc;
     overflow-x: hidden;
@@ -27,7 +27,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     padding: 20px;
 }
@@ -239,6 +239,8 @@
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.3s;
+    position: relative;
+    right: 100px;
   }
   
   .add-medicine-btn:hover {

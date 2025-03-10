@@ -163,3 +163,57 @@
         height: auto;
     }
 }
+
+.password-strength {
+    margin-top: 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .strength-meter {
+    height: 6px;
+    width: 100px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .strength-bar {
+    height: 100%;
+    width: 0;
+    transition: width 0.3s ease;
+  }
+  
+  .weak .strength-bar {
+    width: 33%;
+    background-color: #ff4d4f;
+  }
+  
+  .medium .strength-bar {
+    width: 66%;
+    background-color: #faad14;
+  }
+  
+  .strong .strength-bar {
+    width: 100%;
+    background-color: #52c41a;
+  }
+  
+  .strength-text {
+    font-weight: 500;
+  }
+  
+  .weak .strength-text {
+    color: #ff4d4f;
+  }
+  
+  .medium .strength-text {
+    color: #faad14;
+  }
+  
+  .strong .strength-text {
+    color: #52c41a;
+  }
+  

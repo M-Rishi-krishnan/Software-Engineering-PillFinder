@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +17,7 @@ const MedicineSearch = () => {
   const userRole = localStorage.getItem("role");
 
   const handleAddMedicineClick = () => {
-    navigate("/add-medicine");
+    navigate("/admin-panel");
   };
 
   useEffect(() => {

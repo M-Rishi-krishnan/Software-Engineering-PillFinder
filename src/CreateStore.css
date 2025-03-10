@@ -85,3 +85,26 @@
     height: 60px;
   }
   
+  .unauthorized-message {
+    margin: 12%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    padding: 90px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+  
+  .unauthorized-message h2 {
+    color: #bd0606a6;
+    margin-top: 1rem;
+  }
+  
+  .unauthorized-message p {
+    margin: 1rem 0;
+    font-size: 1.1rem;
+    color: #666;
+  }

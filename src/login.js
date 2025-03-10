@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { FaUser, FaUserMd, FaUserShield } from "react-icons/fa";
 import { motion } from "framer-motion";
@@ -56,15 +55,14 @@ const Login = () => {
           localStorage.setItem("token", data.token);
           localStorage.setItem("email", credentials.email);
           localStorage.setItem("role", role);
-          console.log("Token payload:", JSON.parse(atob(data.token.split('.')[1])));
-          navigate(data.redirect, { replace: true }); // Trigger
+          navigate(data.redirect, { replace: true });
         }
       } else {
         setError(data.message || "Login failed! Check your credentials.");
       }
     } catch (error) {
       console.error("❌ Error:", error);
-      setError("Failed to connect to the server.");
+      setError("Failed to connect to the server1.");
     }
   };
 
@@ -88,6 +86,7 @@ const Login = () => {
       if (data.success) {
         localStorage.setItem("email", data.email);
         localStorage.setItem("token", data.token);
+        localStorage.setItem("role", "admin");
         navigate("/admin-panel");  
       } else {
         setError(data.message || "Invalid OTP.");
@@ -177,7 +176,7 @@ const Login = () => {
 
               <motion.button className="login-button" onClick={handleVerifyOtp} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 Verify OTP
-              </motion.button>
+              </motion.button>  
             </>
           )}
         </div>
