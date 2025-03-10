@@ -23,6 +23,14 @@ const Login = () => {
     localStorage.removeItem("email");
   }, []);
 
+  useEffect(() => {
+    // Auto-switch to login mode when admin role is selected
+    if (role === "admin" && isSignUp) {
+      setIsSignUp(false);
+    }
+  }, [role]);
+  
+
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
   };
@@ -33,7 +41,7 @@ const Login = () => {
       setError("Email and Password are required!");
       return;
     }
-
+    
     const url = isSignUp ? "http://127.0.0.1:5000/signup" : "http://127.0.0.1:5000/signin";
 
     

@@ -35,20 +35,7 @@ function App() {
   );
 }
 
-function AppContent({ userRole }) {
-  const navigate = useNavigate();
-  const location = useLocation(); // Get current location
-
-  useEffect(() => {
-    const currentPath = location.pathname;
-    
-    if (userRole === 'storeOwner' && currentPath !== '/add-medicine' ){
-      navigate('/admin-panel');
-    } else if (userRole === 'customer' && currentPath !== '/medicine-search') {
-      navigate('/');
-    }
-  }, [userRole, navigate, location.pathname]); // Include location.pathname in dependency array
-
+function AppContent() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />

@@ -83,6 +83,16 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (parseInt(stock, 10) <= 0) {
+    setError("Stock must be greater than zero.");
+    return;
+  }
+
+  if (parseFloat(price) < 0) {
+    setError("Price cannot be negative.");
+    return;
+  }
+
   setLoading(true);
   try {
     const response = await fetch("http://127.0.0.1:5000/add-medicine", {
@@ -140,6 +150,16 @@ if (isTokenExpired()) {
   const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
     setError("");
     setMessage("");
+    
+    if (parseInt(updatedStock, 10) <= 0) {
+      setError("Stock must be greater than zero.");
+      return;
+    }
+  
+    if (parseFloat(updatedPrice) < 0) {
+      setError("Price cannot be negative.");
+      return;
+    }
 
     const token = localStorage.getItem("token"); // Get token from local storage
 

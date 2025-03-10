@@ -1,237 +1,402 @@
-/* General Styling */
+/* Import Google Fonts - Replacing Montserrat with more professional fonts */
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap');
+
+/* General Styling with Professional Blue Theme */
 .page-container {
   margin: 0;
-  border: 2px solid black;
-  background-color: #d3d7dc;
+  background-color: #E5EDF1; /* Light blue-grey background */
   padding: 20px;
   min-height: 100vh;
   position: relative;
-  bottom: 50px;
+  font-family: 'Open Sans', sans-serif;
+  color: #293241; /* Dark blue text */
+  line-height: 1.6;
 }
 
-/* Logout Button */
-.logout-btn1 {
-  background: #ff4d4d;
-  color: white;
-  padding: 10px 18px;
-  font-size: 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease-in-out;
-  position: absolute;
-  top: 6.8%;
-  right:13%;
-}
-
-.logout-btn1:hover {
-  background: #cc0000;
-  transform: scale(1.1);
-}
-
-/* Admin Container */
+/* Header and Admin Container with Professional Blue Design */
 .admin-container {
-  max-width: 1200px;
-  margin: 40px auto;
-  padding: 25px;
-  font-family: Arial, sans-serif;
+  max-width: 1280px;
+  margin: 20px auto;
+  padding: 0;
   background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(13, 71, 161, 0.08);
+  overflow: hidden;
+  padding-top: 70px;
+  border-top: 5px solid #1D3461; /* Prussian blue accent */
 }
 
-/* Headings */
+.admin-header {
+  position: relative;
+  background: #03346ddf; /* Dark Classic Blue */
+  padding: 5px 0;
+}
+
+/* Professional Headings with New Font */
 .head1 {
   text-align: center;
-  color: #faf5f5;
-  margin-bottom: 30px;
-  padding-bottom: 15px;
-  border-bottom: 3px solid #0f61b8;
-  font-size: 24px;
-  font-weight: bold;
-  padding-top: 25px;
-  background-color: #064990;
+  color: #ffffff;
+  margin: 15px 0;
+  padding: 10px 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  font-family: 'Raleway', sans-serif;
 }
 
 .head2 {
-  color: #444;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 5px;
-  font-size: 20px;
-  font-weight: bold;
-  margin-top: 40px;
+  color: #1D3461; /* Prussian blue */
+  border-bottom: 2px solid #1D3461;
+  padding-bottom: 10px;
+  margin: 40px 30px 20px;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: 'Raleway', sans-serif;
+  text-align: left;
 }
 
-/* Search Bar */
+/* Professional Logout Button */
+.logout-btn1 {
+  background: #e53e3e;
+  color: white;
+  padding: 10px 20px;
+  font-size: 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: absolute;
+  top: 50%;
+  right: 40px;
+  transform: translateY(-50%);
+  box-shadow: 0 4px 6px rgba(229, 62, 62, 0.2);
+  font-family: 'Open Sans', sans-serif;
+}
+
+.logout-btn1:hover {
+  background: #c53030;
+  box-shadow: 0 6px 8px rgba(229, 62, 62, 0.3);
+}
+
+/* Fixed Professional Blue Navigation Bar */
+.navigation-links {
+  background: #002349; /* Oxford Blue */
+  padding: 12px 20px;
+  display: flex;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+.navigation-links a {
+  margin: 0 25px;
+  text-decoration: none;
+  color: #ffffff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-family: 'Open Sans', sans-serif;
+}
+
+.navigation-links a:hover {
+  background-color: #134074; /* Indigo Dye */
+  transform: translateY(-1px);
+}
+
+.navigation-links a svg {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+/* Refined Search Bar */
 .search-bar {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  width: 94%;
+  padding: 14px 20px;
+  margin: 25px auto;
+  border: 1px solid #BDC6CF; /* Loblolly */
+  border-radius: 4px;
   font-size: 16px;
+  display: block;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+  font-family: 'Open Sans', sans-serif;
 }
 
-/* Tables */
+.search-bar:focus {
+  outline: none;
+  border-color: #4A8BDF; /* Royal Blue */
+  box-shadow: 0 0 0 3px rgba(74, 139, 223, 0.2);
+}
+
+/* Section-specific colors for professional blue theme */
+#stores-section .head2 {
+  color: #3975b9; /* Indigo Dye */
+  border-bottom: 2px solid #134074;
+}
+
+#users-section .head2 {
+  color: #1D3461; /* Prussian Blue */
+  border-bottom: 2px solid #1D3461;
+}
+
+#medicines-section .head2 {
+  color: #01257D; /* Deep Navy */
+  border-bottom: 2px solid #01257D;
+}
+
+#add-admin-section .head2 {
+  color: #0A1828; /* Dark Classic Blue */
+  border-bottom: 2px solid #0A1828;
+}
+
+/* Professional Tables with better alignment */
 table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
+  width: 94%;
+  margin: 20px auto;
+  border-collapse: separate;
+  border-spacing: 0;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Section-specific table headers with professional blue colors */
+#stores-section th {
+  background: #1b4b93; /* Indigo Dye */
+}
+
+#users-section th {
+  background: #1D3461; /* Prussian Blue */
+}
+
+#medicines-section th {
+  background: #01257D; /* Deep Navy */
 }
 
 th, td {
-  padding: 14px;
+  padding: 16px 20px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #E5EDF1; /* Light blue-grey */
 }
 
 th {
-  background-color: #007bff;
   color: white;
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  font-family: 'Raleway', sans-serif;
+}
+
+td {
+  font-family: 'Open Sans', sans-serif;
+  color: #293241; /* Dark Blue */
+}
+
+tr:last-child td {
+  border-bottom: none;
 }
 
 tr:hover {
-  background-color: #f8f9fa;
+  background-color: #F0F7FA; /* Very light blue */
 }
 
-/* Delete Button */
+/* Professional Buttons */
 .delete-btn {
-  background-color: #e74c3c;
+  background: #dc2626;
   color: white;
   border: none;
-  padding: 8px 12px;
-  border-radius: 5px;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: 0.3s;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(229, 62, 62, 0.2);
+  font-family: 'Open Sans', sans-serif;
 }
 
 .delete-btn:hover {
-  background-color: #c0392b;
-  transform: scale(1.05);
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(229, 62, 62, 0.3);
 }
 
-/* Add Admin Section */
+.delete-btn svg {
+  margin-right: 6px;
+}
+
+/* Enhanced Add Admin Section with Professional Alignment */
+#add-admin-section {
+  width: 94%;
+  margin: 40px auto;
+}
+
 .add-admin {
-  margin-top: 30px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .add-admin input {
-  width: calc(50% - 10px);
-  padding: 12px;
-  margin: 5px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
+  width: calc(50% - 20px);
+  padding: 14px 16px;
+  margin: 8px;
+  border: 1px solid #BDC6CF; /* Loblolly */
+  border-radius: 4px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  font-family: 'Open Sans', sans-serif;
+}
+
+.add-admin input:focus {
+  outline: none;
+  border-color: #4A8BDF; /* Royal Blue */
+  box-shadow: 0 0 0 3px rgba(74, 139, 223, 0.2);
 }
 
 .add-admin button {
   display: block;
   width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  background-color: #28a745;
+  padding: 14px;
+  margin-top: 20px;
+  background: #0e458d; /* Royal Blue */
   color: white;
   border: none;
   font-size: 16px;
-  border-radius: 5px;
+  font-weight: 500;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(74, 139, 223, 0.2);
+  font-family: 'Raleway', sans-serif;
 }
 
 .add-admin button:hover {
-  background-color: #218838;
-  transform: scale(1.05);
+  background: #3A70B2; /* Darker Royal Blue */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(74, 139, 223, 0.3);
 }
 
-/* Success and Error Messages */
+/* Improved Success and Error Messages */
 .success {
-  color: #28a745;
-  font-weight: bold;
-  margin-top: 10px;
-  font-size: 16px;
+  color: #4A8BDF; /* Royal Blue */
+  font-weight: 500;
+  margin: 15px auto;
+  padding: 12px 20px;
+  background-color: #E8F0FE;
+  border-left: 4px solid #4A8BDF;
+  border-radius: 4px;
+  width: 94%;
+  font-family: 'Open Sans', sans-serif;
+  text-align: left;
 }
 
 .error {
-  color: #dc3545;
-  font-weight: bold;
-  margin-top: 10px;
-  font-size: 16px;
-}
-
-.unauthorized-message {
-  margin: 12%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: white;
-  padding: 90px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.unauthorized-message h2 {
-  color: #bd0606a6;
-  margin-top: 1rem;
-}
-
-.unauthorized-message p {
-  margin: 1rem 0;
-  font-size: 1.1rem;
-  color: #666;
-}
-
-.medicine-list {
-  margin-top: 20px;
-  overflow-x: auto;
-}
-
-.medicine-list table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.medicine-list th, .medicine-list td {
+  color: #e53e3e;
+  font-weight: 500;
+  margin: 15px auto;
+  padding: 12px 20px;
+  background-color: #fff5f5;
+  border-left: 4px solid #e53e3e;
+  border-radius: 4px;
+  width: 94%;
+  font-family: 'Open Sans', sans-serif;
   text-align: left;
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
 }
 
-.medicine-list th {
-  background-color: #f2f2f2;
-}
-
+/* Enhanced Unauthorized Message */
 .unauthorized-message {
-  margin: 12%;
+  margin: 6% auto;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   background-color: white;
-  padding: 90px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 60px 40px;
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   text-align: center;
+  padding-bottom: 12%;
+}
+
+.unauthorized-message svg {
+  margin-bottom: 20px;
+  color: #e53e3e;
 }
 
 .unauthorized-message h2 {
-  color: #bd0606a6;
-  margin-top: 1rem;
+  color: #e53e3e;
+  margin-top: 0;
+  font-size: 28px;
+  font-weight: 600;
 }
 
 .unauthorized-message p {
-  margin: 1rem 0;
-  font-size: 1.1rem;
-  color: #666;
+  margin: 16px 0 30px;
+  font-size: 18px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.return-home-btn {
+  background: #1a6985;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(26, 105, 133, 0.2);
+  font-family: 'Montserrat', sans-serif;
+}
+
+.return-home-btn:hover {
+  background: #0e4f63;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(26, 105, 133, 0.3);
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+  .navigation-links {
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  
+  .navigation-links a {
+    margin: 5px;
+    font-size: 14px;
+  }
+  
+  .add-admin input {
+    width: 100%;
+  }
+  
+  .logout-btn1 {
+    position: static;
+    margin: 10px auto;
+    display: block;
+    transform: none;
+  }
+  
+  /* Adjust for fixed nav on mobile */
+  .admin-container {
+    padding-top: 120px;
+  }
 }

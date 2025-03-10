@@ -1,9 +1,8 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import psycopg2
 import bcrypt
-from flask_jwt_extended import create_access_token, jwt_required, JWTManager, get_jwt_identity ,get_jwt
+from flask_jwt_extended import create_access_token, jwt_required,verify_jwt_in_request,JWTManager, get_jwt_identity ,get_jwt
 from psycopg2.extras import RealDictCursor
 import random
 from flask_mail import Mail, Message
@@ -16,7 +15,12 @@ from functools import wraps
 from flask_login import current_user
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",  # Or specify your allowed origins
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }})
 app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
 app.config["SECRET_KEY"] = "supersecuresecret"  # For sessions
 
@@ -42,7 +46,7 @@ otp_storage = {}  # Temporary store for OTPs (use Redis in production)
 limiter = Limiter(
     key_func=get_remote_address,  # Limits based on client IP
     app=app,
-    default_limits=["200 per day", "50 per hour"]  # Global limits (adjust as needed)
+    default_limits=["1000 per day", "200 per hour"]  # Global limits (adjust as needed)
 )
 
 
@@ -53,17 +57,6 @@ class User:
         self.id = id
         self.role = role
         self.is_authenticated = True
-
-@app.route("/test-auth", methods=["POST"])
-def test_auth():
-    auth_header = request.headers.get('Authorization')
-    return jsonify({
-        "success": True,
-        "message": "Auth test successful",
-        "auth_header": auth_header,
-        "has_bearer": auth_header.startswith("Bearer ") if auth_header else False,
-        "token": auth_header.replace("Bearer ", "") if auth_header and auth_header.startswith("Bearer ") else None
-    }), 200
 
 
 @identity_loaded.connect_via(app)
@@ -132,6 +125,7 @@ def get_table_name(role):
 
 # ✅ User Signup Route
 @app.route("/signup", methods=["POST"])
+#@limiter.limit("5 per minute")  # Limit login attempts 
 def signup():
     data = request.json
     email = data.get("email")
@@ -294,6 +288,7 @@ def signin():
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
         jwt_claims = get_jwt()  # Get the JWT claims
         role = jwt_claims.get("role")
         
@@ -307,6 +302,7 @@ def admin_required(f):
 def store_owner_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
         jwt_claims = get_jwt()  # Get the JWT claims
         role = jwt_claims.get("role")
         
@@ -320,6 +316,7 @@ def store_owner_required(f):
 def customer_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
         jwt_claims = get_jwt()  # Get the JWT claims
         role = jwt_claims.get("role")
         
@@ -936,10 +933,11 @@ def get_all_medicines():
 
         # ✅ Fetch medicines along with store details
         cursor.execute("""
-            SELECT m.id, m.name, m.stock, m.price, 
+            SELECT m.id, m.name, m.stock, m.price, m.store_id,
                    s.name AS store_name, s.address AS store_address, s.phone AS store_phone
             FROM medicines m
             JOIN stores s ON m.store_id = s.id
+            WHERE m.stock > 0 
         """)
         medicines = cursor.fetchall()
 
@@ -992,6 +990,7 @@ def search_medicines():
             FROM medicines m
             JOIN stores s ON m.store_id = s.id
             WHERE LOWER(m.name) LIKE %s
+            AND m.stock > 0
             ORDER BY distance ASC  -- Sort by closest store
             LIMIT 10;
         """, (latitude, longitude, latitude, f"%{query}%"))
@@ -1174,6 +1173,106 @@ def update_medicine():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route("/delete-medicine", methods=["POST"])
+def delete_medicine():
+    data = request.json
+    email = data.get("email")
+    medicine_name = data.get("medicineName")
+
+    if not email or not medicine_name:
+        return jsonify({"success": False, "message": "Email and medicine name are required"}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Fetch store ID and store name
+        cursor.execute("""
+            SELECT s.id, s.name  
+            FROM owners o  
+            JOIN stores s ON o.id = s.owner_id  
+            WHERE o.email = %s
+        """, (email,))
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({"success": False, "message": "Store not found"}), 404
+
+        store_id, store_name = result
+        table_name = f"store_{store_name}_medicines"
+
+        # Delete from store-specific table
+        cursor.execute(f"DELETE FROM {table_name} WHERE name = %s", (medicine_name,))
+        
+        # Delete from global medicines table
+        cursor.execute("""
+            DELETE FROM medicines 
+            WHERE name = %s AND store_id = %s
+        """, (medicine_name, store_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": "Medicine deleted successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route("/admin-delete-medicine", methods=["OPTIONS"])
+def admin_delete_medicine_options():
+    response = jsonify({"success": True})
+    response.headers.add("Access-Control-Allow-Methods", "POST")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    return response
+
+@app.route("/admin-delete-medicine", methods=["POST", "OPTIONS"])
+@jwt_required()
+@admin_required
+def admin_delete_medicine():
+    data = request.json
+    medicine_id = data.get("medicineId")
+    store_id = data.get("storeId")
+    medicine_name = data.get("medicineName")
+
+    if not medicine_id or not store_id or not medicine_name:
+        return jsonify({"success": False, "message": "Medicine ID, store ID, and medicine name are required"}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Fetch store name
+        cursor.execute("SELECT name FROM stores WHERE id = %s", (store_id,))
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify({"success": False, "message": "Store not found"}), 404
+
+        store_name = result[0]
+        table_name = f"store_{store_name}_medicines"
+
+        # Delete from store-specific table
+        cursor.execute(f"DELETE FROM {table_name} WHERE name = %s", (medicine_name,))
+        
+        # Delete from global medicines table
+        cursor.execute("""
+            DELETE FROM medicines 
+            WHERE id = %s AND store_id = %s
+        """, (medicine_id, store_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": "Medicine deleted successfully"}), 200
+
+    except Exception as e:
+        print(f"Error in admin_delete_medicine: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     app.run(debug=True) 

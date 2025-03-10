@@ -17,7 +17,7 @@ const MedicineSearch = () => {
   const userRole = localStorage.getItem("role");
 
   const handleAddMedicineClick = () => {
-    navigate("/admin-panel");
+    navigate("/add-medicine");
   };
 
   useEffect(() => {

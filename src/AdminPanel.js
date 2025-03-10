@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./AdminPanel.css";
 import { useNavigate } from "react-router-dom";
-import { FaExclamationTriangle} from "react-icons/fa";
+import { FaExclamationTriangle, FaTrash, FaPills, FaStore, FaUsers, FaUserCog } from "react-icons/fa";
 
 const AdminPanel = () => {
   const [stores, setStores] = useState([]);
@@ -14,7 +14,7 @@ const AdminPanel = () => {
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminAppPassword, setNewAdminAppPassword] = useState("");
   const [authorized, setAuthorized] = useState(false); // Track if user is authorized
-
+  const [medicines, setMedicines] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,8 +28,12 @@ const AdminPanel = () => {
     }
     fetchStores();
     fetchUsers();
+    fetchMedicines();
   }, []);
+
+
   const token = localStorage.getItem("token");
+
   const fetchStores = () => {
     fetch("http://127.0.0.1:5000/get-all-stores", {
       headers: {
@@ -83,9 +87,10 @@ const AdminPanel = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-store", {
         method: "POST",
-        headers: { "Content-Type": "application/json",
+        headers: { 
+          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-         },
+        },
         body: JSON.stringify({ storeId, ownerEmail }),
       });
 
@@ -109,9 +114,10 @@ const AdminPanel = () => {
       const token = localStorage.getItem("token");
       const response = await fetch("http://127.0.0.1:5000/delete-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json",
+        headers: { 
+          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-         },
+        },
         body: JSON.stringify({ userId, role, storeId }),
       });
 
@@ -138,9 +144,10 @@ const AdminPanel = () => {
     try {
       const response = await fetch("http://127.0.0.1:5000/delete-admin", {
         method: "POST",
-        headers: { "Content-Type": "application/json",
+        headers: { 
+          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-         },
+        },
         body: JSON.stringify({ adminId }),
       });
 
@@ -195,14 +202,71 @@ const AdminPanel = () => {
     }
   };
   
+  const handleDeleteMedicine = async (medicineId, storeId, medicineName) => {
+    try {
+      if (!medicineId || !storeId || !medicineName) {
+        setError("Missing required parameters for medicine deletion");
+        return;
+      }
+      const email = localStorage.getItem("email");
+      const response = await fetch("http://127.0.0.1:5000/admin-delete-medicine", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          medicineId: medicineId, 
+          storeId: storeId, 
+          medicineName: medicineName 
+        }),
+      });
 
+      const data = await response.json();
+      if (data.success) {
+        setMedicines(medicines.filter(med => med.medicineName !== medicineName));
+        setMessage("Medicine deleted successfully!");
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("Error deleting medicine.");
+    }
+  };
+
+  const fetchMedicines = () => {
+    fetch("http://127.0.0.1:5000/get-all-medicines", {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setMedicines(data.medicines);
+        } else {
+          setError(data.message);
+        }
+      })
+      .catch(() => setError("Failed to fetch medicines."));
+  };
+  
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("role");
+    localStorage.removeItem("token");
+    localStorage.removeItem("email");
+    
+    // Dispatch a custom event to notify App about the logout
+    window.dispatchEvent(new Event('logout'));
+    
     navigate("/");
   };
 
-  if (!authorized) {
-      return (
+  return (
+    <div className="page-container">
+      {!authorized ? (
         <div className="container">
           <div className="unauthorized-message">
             <FaExclamationTriangle size={50} color="#ff6b6b" />
@@ -216,94 +280,133 @@ const AdminPanel = () => {
             </button>
           </div>
         </div>
-      );
-    }
+      ) : (
+        <div className="admin-container">
+          <div className="admin-header">
+            <h1 className="head1">ADMIN PANEL</h1>
+            <button className="logout-btn1" onClick={handleLogout}>Logout</button>
+          </div>
+          
+          {/* Navigation Links */}
+          <div className="navigation-links">
+            <a href="#stores-section"><FaStore /> Stores</a>
+            <a href="#users-section"><FaUsers /> Users</a>
+            <a href="#medicines-section"><FaPills /> Medicines</a>
+            <a href="#add-admin-section"><FaUserCog /> Add Admin</a>
+          </div>
 
-  return (
-    <div className="page-container">
-      <div className="admin-container">
-        <div className="admin-header">
-          <h1 className="head1">ADMIN PANEL</h1>
-          <button className="logout-btn1" onClick={handleLogout}>Logout</button>
-        </div>
+          <input
+            type="text"
+            placeholder="Search stores..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="search-bar"
+          />
 
-        <input
-          type="text"
-          placeholder="Search stores..."
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="search-bar"
-        />
-
-        <div className="store-list">
-          <h2 className="head2">Manage Stores</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Store Name</th>
-                <th>Owner Email</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStores.map((store) => (
-                <tr key={store.id}>
-                  <td>{store.name}</td>
-                  <td>{store.owner_email}</td>
-                  <td>
-                    <button className="delete-btn" onClick={() => handleDeleteStore(store.id, store.owner_email)}>
-                      Delete Store & Owner
-                    </button>
-                  </td>
+          {/* Add id attribute to each section */}
+          <div id="stores-section" className="store-list">
+            <h2 className="head2">Manage Stores</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Store Name</th>
+                  <th>Owner Email</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredStores.map((store) => (
+                  <tr key={store.id}>
+                    <td>{store.name}</td>
+                    <td>{store.owner_email}</td>
+                    <td>
+                      <button className="delete-btn" onClick={() => handleDeleteStore(store.id, store.owner_email)}>
+                        Delete Store & Owner
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <div className="user-list">
-          <h2 className="head2">Manage Users</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.email}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    {user.role === "admin" ? (
-                      <button className="delete-btn" onClick={() => handleDeleteAdmin(user.id)}>
-                        Delete Admin
-                      </button>
-                    ) : (
-                      <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role, user.store_id)}>
-                        Delete User
-                      </button>
-                    )}
-                  </td>
+          <div id="users-section" className="user-list">
+            <h2 className="head2">Manage Users</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.email}</td>
+                    <td>{user.role}</td>
+                    <td>
+                      {user.role === "admin" ? (
+                        <button className="delete-btn" onClick={() => handleDeleteAdmin(user.id)}>
+                          Delete Admin
+                        </button>
+                      ) : (
+                        <button className="delete-btn" onClick={() => handleDeleteUser(user.id, user.role, user.store_id)}>
+                          Delete User
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* New Medicines Section */}
+          <div id="medicines-section" className="medicine-list">
+            <h2 className="head2">Manage Medicines</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Medicine Name</th>
+                  <th>Store</th>
+                  <th>Stock</th>
+                  <th>Price</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicines.map((medicine) => (
+                  <tr key={medicine.id}>
+                    <td>{medicine.name}</td>
+                    <td>{medicine.store_name}</td>
+                    <td>{medicine.stock}</td>
+                    <td>${medicine.price.toFixed(2)}</td>
+                    <td>
+                      <button className="delete-btn" onClick={() => handleDeleteMedicine(medicine.id, medicine.store_id, medicine.name)}>
+                        <FaTrash /> Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        <h2 className="head2">Add New Admin</h2>
-        <div className="add-admin">
-          <input type="email" placeholder="Admin Email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
-          <input type="password" placeholder="Admin Password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} />
-          <input type="password" placeholder="Admin Gmail App Password" value={newAdminAppPassword} onChange={(e) => setNewAdminAppPassword(e.target.value)} />
-          <button onClick={handleAddAdmin}>Add Admin</button>
-        </div>
+          <div id="add-admin-section">
+            <h2 className="head2">Add New Admin</h2>
+            <div className="add-admin">
+              <input type="email" placeholder="Admin Email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} />
+              <input type="password" placeholder="Admin Password" value={newAdminPassword} onChange={(e) => setNewAdminPassword(e.target.value)} />
+              <input type="password" placeholder="Admin Gmail App Password" value={newAdminAppPassword} onChange={(e) => setNewAdminAppPassword(e.target.value)} />
+              <button onClick={handleAddAdmin}>Add Admin</button>
+            </div>
+          </div>
 
-        {message && <p className="success">{message}</p>}
-        {error && <p className="error">{error}</p>}
-      </div>
+          {message && <p className="success">{message}</p>}
+          {error && <p className="error">{error}</p>}
+        </div>
+      )}
     </div>
   );
 };
