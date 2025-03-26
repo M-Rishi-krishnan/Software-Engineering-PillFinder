@@ -253,15 +253,18 @@ const AdminPanel = () => {
   };
   
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("role");
-    localStorage.removeItem("token");
-    localStorage.removeItem("email");
-    
-    // Dispatch a custom event to notify App about the logout
-    window.dispatchEvent(new Event('logout'));
-    
-    navigate("/");
+        // Clear application session
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("role");
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+       
+        // Redirect to Auth0 logout endpoint
+        const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
+        const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"; // Replace with your Client ID
+        const returnToUrl = `${window.location.origin}`; // Redirect back to your website's login page
+      
+        window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
   };
 
   return (

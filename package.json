@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@auth0/auth0-react": "^2.3.0",
+    "@react-oauth/google": "^0.12.1",
+    "auth0-lock": "^13.0.0",
     "axios": "^1.8.2",
     "cra-template": "1.2.0",
     "framer-motion": "^12.4.2",

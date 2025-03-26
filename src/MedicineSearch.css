@@ -1,19 +1,3 @@
-.MedicineSearch-body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    font-family: 'Inter', sans-serif;
-    background: #f4f7fc;
-    overflow-x: hidden;
-}
-
-.title {
-    color:rgb(255, 255, 255);
-    position: relative;
-    left: 21%;
-}
-
 /* Universal Reset */
 * {
     margin: 0;
@@ -21,15 +5,24 @@
     box-sizing: border-box;
 }
 
-/* Main Layout */
+/* Body Styles */
+.MedicineSearch-body {
+    margin: 0;
+    padding: 0;
+    padding-left: 1%;
+    padding-right: 1%;
+    width: 100%;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(to right, #1565c0, #1e88e5);
+    overflow-x: hidden;
+}
+
+/* Container */
 .container {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    height: 100%;
-    width: 100%;
-    padding: 20px;
+    min-height: 100vh;
 }
 
 /* Navbar */
@@ -42,15 +35,74 @@
     font-size: 28px;
     font-weight: bold;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    position: relative;
-    border: px solid rgb(14, 29, 104);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.title {
+    color: white;
+    background-color: #052fac;
+    padding: 20px;
+}
+
+/* Main Content Layout */
+.main-content {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* Filter Sidebar */
+.filter-sidebar {
+    width: 250px;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    position: sticky;
+    top: 90px;
+    align-self: flex-start;
+    height: calc(100vh - 310px);
+    overflow-y: auto;
+}
+
+.filter-sidebar h3 {
+    margin-bottom: 15px;
+}
+
+.filter-sidebar input,
+.filter-sidebar button {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.filter-sidebar button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.filter-sidebar button:hover {
+    background-color: #0056b3;
+}
+
+/* Search Results */
+.search-results {
+    flex: 1;
+    min-width: 0;
+    padding: 0 20px;
 }
 
 /* Search Box */
 .search-box {
-    width: 50%;
-    margin: 20px auto;
-    position: relative;
+    width: 100%;
+    margin: 20px 0;
 }
 
 .search-input {
@@ -71,181 +123,162 @@
 
 /* Suggestions Dropdown */
 .suggestions {
-    position: absolute;
-    top: 29%;
-    width: 40%;
-    background: rgb(255, 255, 255);
-    border-radius: 6px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-    margin-top: 5px;
-    max-height: 220px;
+    list-style: none;
+    background: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
     overflow-y: auto;
-    z-index: 10;
 }
 
 .suggestions li {
-    padding: 12px;
-    font-size: 16px;
+    padding: 10px;
     cursor: pointer;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    transition: 0.2s;
+    transition: background-color 0.3s;
 }
 
 .suggestions li:hover {
-    background: rgba(0, 123, 255, 0.1);
+    background-color: #f0f0f0;
 }
 
 /* Results Table */
 .results-container {
-    width: 85%;
-    margin-top: 20px;
-    border-radius: 10px;
     background: white;
+    border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    overflow: hidden;
 }
 
 .medicine-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 17px;
-    border-radius: 8px;
+    position: relative;
+    bottom: 21px;
 }
 
 .medicine-table th, 
 .medicine-table td {
-    padding: 14px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 12px;
     text-align: left;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .medicine-table th {
-    background: linear-gradient(135deg, #0033cc, #0055ff);
+    background: #007bff;
     color: white;
     font-weight: bold;
-    text-transform: uppercase;
 }
 
 .medicine-table tr:hover {
-    background: rgba(0, 85, 255, 0.1);
+    background-color: #f5f5f5;
 }
 
-/* No Results Message */
-.no-results {
-    font-size: 18px;
-    color: #d32f2f;
-    margin-top: 20px;
+/* Messages */
+.no-results, .error-msg {
     text-align: center;
+    padding: 20px;
+    font-size: 18px;
 }
 
-/* Error Message */
+.no-results {
+    color: #666;
+}
+
 .error-msg {
-    font-size: 16px;
-    color: #ff4444;
-    margin-top: 15px;
+    color: #d32f2f;
 }
 
-/* Logout Button */
-.logout-btn {
+/* Buttons */
+.nav-buttons {
     position: absolute;
     top: 15px;
     right: 20px;
-    background: #ff4d4d;
-    color: white;
-    padding: 10px 18px;
-    font-size: 16px;
+}
+
+.logout-btn, .add-medicine-btn {
+    padding: 8px 16px;
+    font-size: 14px;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: 0.3s ease-in-out;
+    transition: background-color 0.3s;
+}
+
+.logout-btn {
+    background-color: #ff4d4d;
+    color: white;
+    margin-left: 10px;
 }
 
 .logout-btn:hover {
-    background: #cc0000;
+    background-color: #cc0000;
+}
+
+.add-medicine-btn {
+    background-color: #4caf50;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.add-medicine-btn:hover {
+    background-color: #45a049;
+}
+
+/* Location Display */
+.location-display {
+    background-color: white;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive Design */
 @media screen and (max-width: 1024px) {
-    .search-box {
-        width: 70%;
+    .main-content {
+        flex-direction: column;
     }
-    .results-container {
-        width: 90%;
+
+    .filter-sidebar {
+        width: 100%;
+        position: static;
+        height: auto;
+        margin-bottom: 20px;
+    }
+
+    .search-results {
+        padding: 0;
     }
 }
 
 @media screen and (max-width: 768px) {
     .navbar {
         font-size: 24px;
-        padding: 15px 0;
-    }
-    
-    .search-box {
-        width: 90%;
     }
 
-    .medicine-table th, .medicine-table td {
-        padding: 10px;
-        font-size: 15px;
+    .nav-buttons {
+        position: static;
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
     }
 
-    .logout-btn {
-        font-size: 14px;
-        padding: 8px 15px;
+    .logout-btn, .add-medicine-btn {
+        font-size: 12px;
     }
 }
 
 @media screen and (max-width: 480px) {
     .navbar {
         font-size: 20px;
-        padding: 10px 0;
-    }
-    
-    .search-box {
-        width: 100%;
+        padding: 15px 0;
     }
 
-    .medicine-table th, .medicine-table td {
+    .medicine-table th, 
+    .medicine-table td {
         padding: 8px;
         font-size: 14px;
     }
-
-    .logout-btn {
-        font-size: 12px;
-        padding: 6px 12px;
-    }
 }
-
-.location-display
-{
-    color: rgb(5, 5, 5);
-    margin-top: 20px;
-    background-color: rgb(250, 242, 242);
-    padding: 5px;
-    text-align: center;
-}
-
-.nav-buttons {
-    display: flex;
-    gap: 10px;
-  }
-  
-  .add-medicine-btn {
-    background-color: #4caf50;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s;
-    position: relative;
-    right: 100px;
-  }
-  
-  .add-medicine-btn:hover {
-    background-color: #45a049;
-  }
-  
- 
-  

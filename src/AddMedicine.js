@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./AddMedicine.css"; // Import CSS
@@ -196,13 +195,23 @@ if (isTokenExpired()) {
   
   // Handle Logout
   const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
+        // Clear application session
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("role");
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+       
+        // Redirect to Auth0 logout endpoint
+        const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
+        const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"; // Replace with your Client ID
+        const returnToUrl = `${window.location.origin}`; // Redirect back to your website's login page
+      
+        window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
   };
 
   if (!authorized) {
     return (
-      <div className="container">
+      <div className="container1">
         <div className="unauthorized-message">
           <FaExclamationTriangle size={50} color="#ff6b6b" />
           <h2>Access Denied</h2>
@@ -218,9 +227,9 @@ if (isTokenExpired()) {
     );
   }
   return (
-    <div className="container">
+    <div className="container1">
       {/* Navbar */}
-      <div className="navbar">
+      <div className="navbar1">
         <h2 className="store-title">Store: {storeName || "Loading..."}</h2>
         <button className="logout-btn" onClick={handleLogout}>
           <i className="fas fa-sign-out-alt"></i> Logout

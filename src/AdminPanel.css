@@ -86,7 +86,7 @@
   display: flex;
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;

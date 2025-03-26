@@ -1,5 +1,5 @@
 /* General Page Styling */
-.container {
+.container1 {
     font-family: "Poppins", sans-serif;
     background: linear-gradient(to right, #1565c0, #1e88e5);
     margin: 0;
@@ -12,7 +12,7 @@
 }
 
 /* Navbar */
-.navbar {
+.navbar1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
