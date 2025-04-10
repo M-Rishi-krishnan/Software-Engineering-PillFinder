@@ -9,6 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import smtplib
 from functools import wraps
+import requests
 
 app = Flask(__name__)
 CORS(app, resources={
@@ -437,7 +438,8 @@ def expired_token_callback(jwt_header, jwt_payload):
 def invalid_token_callback(error):
     print(f"Invalid token: {error}")
     return jsonify({"success": False, "message": f"Invalid token: {error}"}), 401
-    
+
+
 
 # ✅ Medicine Addition Route
 @app.route("/add-medicine", methods=["POST"])
@@ -950,14 +952,17 @@ def get_all_medicines():
 
 @app.route("/search-medicines", methods=["GET"])
 def search_medicines():
+    # Get query parameters
     query = request.args.get("query", "*").strip().lower()
     latitude = request.args.get("latitude", type=float)
     longitude = request.args.get("longitude", type=float)
     store_query = request.args.get("store", "").strip().lower()
 
+    # Validate user location
     if latitude is None or longitude is None:
         return jsonify({"message": "Missing location!", "success": False}), 400
 
+    # Check if search query is empty
     is_empty_search = (query == "*" and not store_query)
 
     try:
@@ -965,54 +970,82 @@ def search_medicines():
         cursor = conn.cursor()
 
         if is_empty_search:
+            # Fetch all medicines when no specific query is provided
             sql_query = """
                 SELECT 
-                    m.name, 
+                    m.name,
+                    s.id AS store_id,
                     s.name AS store_name, 
                     m.stock, 
                     m.price, 
                     s.address AS store_address, 
-                    s.phone AS store_phone
+                    s.phone AS store_phone,
+                    (6371 * acos(
+                        cos(radians(%s)) * cos(radians(s.latitude)) *
+                        cos(radians(s.longitude) - radians(%s)) +
+                        sin(radians(%s)) * sin(radians(s.latitude))
+                    )) AS distance_km
                 FROM medicines m
                 JOIN stores s ON m.store_id = s.id
                 WHERE m.stock > 0
                 LIMIT 20;
             """
-            cursor.execute(sql_query)
+            cursor.execute(sql_query, (latitude, longitude, latitude))
+            medicines = [
+                {
+                    "name": row[0],
+                    "store_id": row[1],
+                    "store_name": row[2],
+                    "stock": row[3],
+                    "price": float(row[4]),
+                    "store_address": row[5],
+                    "store_phone": row[6],
+                    "distance_km": round(row[7], 2)
+                }
+                for row in cursor.fetchall()
+            ]
         else:
+            # Fetch medicines based on search query and calculate distance
             sql_query = """
-            SELECT 
-                m.name, 
-                s.name AS store_name, 
-                m.stock, 
-                m.price, 
-                s.address AS store_address, 
-                s.phone AS store_phone,
-                ( 6371 * acos( cos( radians(%s) ) * cos( radians( s.latitude ) ) * 
-                  cos( radians( s.longitude ) - radians(%s) ) + 
-                  sin( radians(%s) ) * sin( radians( s.latitude ) ) ) ) AS distance 
-            FROM medicines m
-            JOIN stores s ON m.store_id = s.id
-            WHERE m.stock > 0
-            AND (LOWER(m.name) LIKE %s OR %s = '*')
-            AND (LOWER(s.name) LIKE %s OR %s = '')
-            ORDER BY distance ASC
-            LIMIT 20;
-        """
-        cursor.execute(sql_query, (latitude, longitude, latitude, f"%{query}%", query, f"%{store_query}%", store_query))
-
-        medicines = [
-            {
-                "name": row[0],
-                "store_name": row[1],
-                "stock": row[2],
-                "price": float(row[3]),
-                "store_address": row[4],
-                "store_phone": row[5],
-                "distance_km": round(row[6], 2)
-            }
-            for row in cursor.fetchall()
-        ]
+                SELECT 
+                    m.name, 
+                    s.id AS store_id,
+                    s.name AS store_name, 
+                    m.stock, 
+                    m.price, 
+                    s.address AS store_address, 
+                    s.phone AS store_phone,
+                    (6371 * acos(
+                        cos(radians(%s)) * cos(radians(s.latitude)) *
+                        cos(radians(s.longitude) - radians(%s)) +
+                        sin(radians(%s)) * sin(radians(s.latitude))
+                    )) AS distance_km
+                FROM medicines m
+                JOIN stores s ON m.store_id = s.id
+                WHERE m.stock > 0
+                  AND (LOWER(m.name) LIKE %s OR %s = '*')
+                  AND (LOWER(s.name) LIKE %s OR %s = '')
+                ORDER BY distance_km ASC
+                LIMIT 20;
+            """
+            cursor.execute(sql_query, (
+                latitude, longitude, latitude,
+                f"%{query}%", query,
+                f"%{store_query}%", store_query
+            ))
+            medicines = [
+                {
+                    "name": row[0],
+                    "store_id": row[1],
+                    "store_name": row[2],
+                    "stock": row[3],
+                    "price": float(row[4]),
+                    "store_address": row[5],
+                    "store_phone": row[6],
+                    "distance_km": round(row[7], 2)
+                }
+                for row in cursor.fetchall()
+            ]
 
         cursor.close()
         conn.close()
@@ -1275,6 +1308,60 @@ def admin_delete_medicine():
 
     except Exception as e:
         print(f"Error in admin_delete_medicine: {str(e)}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route("/get-directions", methods=["GET"])
+def get_directions():
+    start_lat = request.args.get("start_lat")
+    start_lon = request.args.get("start_lon")
+    end_lat = request.args.get("end_lat")
+    end_lon = request.args.get("end_lon")
+    
+    if not all([start_lat, start_lon, end_lat, end_lon]):
+        return jsonify({"error": "Missing required parameters"}), 400
+    
+    try:
+        ors_api_key = "5b3ce3597851110001cf6248f613eed7849e4452babf2db23cf4bc41"
+        url = f"https://api.openrouteservice.org/v2/directions/driving-car?api_key={ors_api_key}&start={start_lon},{start_lat}&end={end_lon},{end_lat}"
+        
+        
+        response = requests.get(url)
+
+        response = requests.get(url)
+        if response.status_code == 200:
+            return jsonify(response.json()), 200
+        else:
+            return jsonify({"error": f"OpenRouteService API error: {response.status_code}", "details": response.text}), response.status_code
+    
+    except Exception as e:
+        print("Error fetching directions:", str(e))
+        return jsonify({"error": "Failed to get directions", "details": str(e)}), 500
+
+
+
+@app.route("/get-store-coordinates", methods=["GET"])
+def get_store_coordinates():
+    store_id = request.args.get("store_id")
+    if not store_id:
+        return jsonify({"success": False, "message": "Store ID is required"}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT latitude, longitude FROM stores WHERE id = %s", (store_id,))
+        result = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if result:
+            latitude, longitude = result
+            return jsonify({"success": True, "latitude": latitude, "longitude": longitude}), 200
+        else:
+            return jsonify({"success": False, "message": "Store not found"}), 404
+
+    except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
 
