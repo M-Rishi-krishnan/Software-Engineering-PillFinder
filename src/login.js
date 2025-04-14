@@ -44,7 +44,7 @@ const Login = () => {
         try {
           const auth0Role = localStorage.getItem('selectedRole') || 'customer';
           
-          const response = await fetch("http://127.0.0.1:5000/auth0-signin", {
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/auth0-signin`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -90,7 +90,7 @@ const Login = () => {
       return;
     }
 
-    const url = isSignUp ? "http://127.0.0.1:5000/signup" : "http://127.0.0.1:5000/signin";
+    const url = isSignUp ? `${process.env.REACT_APP_API_URL}/signup` : `${process.env.REACT_APP_API_URL}/signin`;
 
     try {
       const response = await fetch(url, {
@@ -128,7 +128,7 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/verify-otp", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: credentials.email, otp }),

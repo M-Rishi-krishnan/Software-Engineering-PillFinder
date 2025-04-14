@@ -112,7 +112,7 @@ const CreateStore = () => {
     console.log("📤 Sending Data:", requestBody);  // 🔴 Debugging log
   
     try {
-      const response = await fetch("http://127.0.0.1:5000/create-store", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/create-store`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
           "Authorization": `Bearer ${token}` },

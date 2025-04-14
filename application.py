@@ -30,7 +30,7 @@ def serve_static(path):
     # Fallback to index.html for client-side routing
     return send_from_directory(app.static_folder, 'index.html')
 
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins (adjust as needed)  
 
 app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
 app.config["SECRET_KEY"] = "supersecuresecret"  # For sessions
@@ -59,7 +59,11 @@ def user_identity_lookup(user):
 # ✅ Function to Connect to PostgreSQL
 def get_db_connection():
     return psycopg2.connect(
-        dbname="pillfinder_db", user="postgres", password="mrk123456", host="localhost", port="5432"
+        dbname=os.environ.get("DB_NAME"),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        host=os.environ.get("DB_HOST"),
+        port=os.environ.get("DB_PORT")
     )
 
 # ✅ Function to Get Table Name Based on Role

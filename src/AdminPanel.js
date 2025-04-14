@@ -35,7 +35,7 @@ const AdminPanel = () => {
   const token = localStorage.getItem("token");
 
   const fetchStores = () => {
-    fetch("http://127.0.0.1:5000/get-all-stores", {
+    fetch(`${process.env.REACT_APP_API_URL}/get-all-stores`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }
@@ -53,7 +53,7 @@ const AdminPanel = () => {
   };
 
   const fetchUsers = () => {
-    fetch("http://127.0.0.1:5000/get-all-users", {
+    fetch(`${process.env.REACT_APP_API_URL}/get-all-users`, {
       headers: {
         "Authorization": `Bearer ${token}`
       }
@@ -85,7 +85,7 @@ const AdminPanel = () => {
   // ✅ Delete Store + Owner
   const handleDeleteStore = async (storeId, ownerEmail) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/delete-store", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-store`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -112,7 +112,7 @@ const AdminPanel = () => {
   const handleDeleteUser = async (userId, role, storeId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://127.0.0.1:5000/delete-user", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-user`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -142,7 +142,7 @@ const AdminPanel = () => {
   // ✅ Delete Admin
   const handleDeleteAdmin = async (adminId) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/delete-admin", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-admin`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -177,7 +177,7 @@ const AdminPanel = () => {
     }
   
     try {
-      const response = await fetch("http://127.0.0.1:5000/add-admin", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/add-admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -209,7 +209,7 @@ const AdminPanel = () => {
         return;
       }
       const email = localStorage.getItem("email");
-      const response = await fetch("http://127.0.0.1:5000/admin-delete-medicine", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/admin-delete-medicine`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -235,7 +235,7 @@ const AdminPanel = () => {
   };
 
   const fetchMedicines = () => {
-    fetch("http://127.0.0.1:5000/get-all-medicines", {
+    fetch(`${process.env.REACT_APP_API_URL}/get-all-medicines`, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`

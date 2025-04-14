@@ -37,7 +37,7 @@ import { FaExclamationTriangle} from "react-icons/fa";
   // Fetch Store Name
   const fetchStoreName = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/get-store?email=${email}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/get-store?email=${email}`);
       const data = await response.json();
       if (data.success && data.store) {
         setStoreName(data.store);
@@ -53,7 +53,7 @@ import { FaExclamationTriangle} from "react-icons/fa";
   // Fetch Medicines
   const fetchMedicines = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:5000/get-medicines?email=${email}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/get-medicines?email=${email}`);
       const data = await response.json();
       if (data.success) {
         setMedicines(data.medicines);
@@ -94,7 +94,7 @@ const handleSubmit = async () => {
 
   setLoading(true);
   try {
-    const response = await fetch("http://127.0.0.1:5000/add-medicine", {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/add-medicine`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -170,7 +170,7 @@ if (isTokenExpired()) {
     };
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/update-medicine", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/update-medicine`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

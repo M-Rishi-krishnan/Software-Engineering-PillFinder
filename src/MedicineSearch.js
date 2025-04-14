@@ -128,7 +128,7 @@ useEffect(() => {
 
   const fetchStoreCoordinates = async (storeId) => {
     try {
-        const response = await fetch(`http://127.0.0.1:5000/get-store-coordinates?store_id=${storeId}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/get-store-coordinates?store_id=${storeId}`);
         const data = await response.json();
         if (data.success) {
             setSelectedMedicine(prevState => ({
@@ -173,7 +173,7 @@ useEffect(() => {
       
       try {
         setRouteCoordinates(null);
-        const response = await fetch(`http://127.0.0.1:5000/get-directions?start_lat=${String(userLocation.latitude)}&start_lon=${String(userLocation.longitude)}&end_lat=${String(selectedMedicine.latitude)}&end_lon=${String(selectedMedicine.longitude)}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/get-directions?start_lat=${String(userLocation.latitude)}&start_lon=${String(userLocation.longitude)}&end_lat=${String(selectedMedicine.latitude)}&end_lon=${String(selectedMedicine.longitude)}`);
         const data = await response.json();
         
         //alert("Direction API response received"); // Debug
@@ -230,7 +230,7 @@ useEffect(() => {
     useEffect(() => {
       const fetchAllMedicines = async () => {
         try {
-          const response = await fetch("http://127.0.0.1:5000/get-all-medicines");
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/get-all-medicines`);
           const data = await response.json();
 
           if (data.success) {
@@ -364,7 +364,7 @@ useEffect(() => {
         }
       
         const queryParam = input.trim() ? `query=${encodeURIComponent(input)}` : 'query=';
-        const url = `http://127.0.0.1:5000/search-medicines?${queryParam}&latitude=${latitude}&longitude=${longitude}`;
+        const url = `${process.env.REACT_APP_API_URL}/search-medicines?${queryParam}&latitude=${latitude}&longitude=${longitude}`;
       
         const response = await fetch(url);
         const data = await response.json();
