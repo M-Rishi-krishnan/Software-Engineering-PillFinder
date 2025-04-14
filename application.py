@@ -10,14 +10,28 @@ from flask_limiter.util import get_remote_address
 import smtplib
 from functools import wraps
 import requests
+import os
+from flask import Flask, send_from_directory
 
-app = Flask(__name__)
-CORS(app, resources={
-    r"/*": {
-        "origins": "*",  # Or specify your allowed origins
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }})
+# Initialize Flask app
+app = Flask(__name__, static_folder='build', static_url_path='/')
+
+# Route to serve React's index.html
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
+
+# Catch-all route for client-side routing
+@app.route('/<path:path>')
+def serve_static(path):
+    # Check if the requested file exists in the static folder
+    if os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    # Fallback to index.html for client-side routing
+    return send_from_directory(app.static_folder, 'index.html')
+
+CORS(app)  # Enable CORS for all routes
+
 app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
 app.config["SECRET_KEY"] = "supersecuresecret"  # For sessions
 
@@ -95,7 +109,7 @@ def signup():
             user_id = cursor.fetchone()[0]     
         
         else:
-            return jsonify({"message": "Invalid role!", "success": False}), 400
+                return jsonify({"message": "Invalid role!", "success": False}), 400
 
         conn.commit()
         cursor.close()
