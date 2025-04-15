@@ -376,9 +376,7 @@ useEffect(() => {
       localStorage.removeItem("token");
       localStorage.removeItem("email");
     
-      //const auth0Domain = process.env.AUTH0_DOMAIN;
-      //const clientId = process.env.AUTH0_CLIENT_ID;      
-      const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
+      const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com";
       const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV";
       const returnToUrl = `${window.location.origin}`;
     

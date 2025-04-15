@@ -402,7 +402,7 @@ def create_store():
         return jsonify({"message": "Store created successfully!", "storeId": store_id, "success": True}), 201
 
     except psycopg2.Error as e:
-        print("Database Error:", e)
+        print("❌ Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @jwt.unauthorized_loader
@@ -1101,6 +1101,7 @@ def admin_delete_medicine():
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # Fetch store name
         cursor.execute("SELECT name FROM stores WHERE id = %s", (store_id,))
         result = cursor.fetchone()
 
@@ -1137,7 +1138,7 @@ def get_directions():
         return jsonify({"error": "Missing required parameters"}), 400
     
     try:
-        ors_api_key = os.environ.get("ORS_API_KEY")
+        ors_api_key = "5b3ce3597851110001cf6248f613eed7849e4452babf2db23cf4bc41"
         url = f"https://api.openrouteservice.org/v2/directions/driving-car?api_key={ors_api_key}&start={start_lon},{start_lat}&end={end_lon},{end_lat}"
 
         response = requests.get(url)
