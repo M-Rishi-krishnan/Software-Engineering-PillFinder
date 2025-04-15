@@ -83,24 +83,44 @@ const Login = () => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
   };
 
+  function isStrongPassword(password) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{16,}$/.test(password);
+  }
+
+  function isValidGmail(email) {
+  return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
+  }
+
+
   const handleSubmit = async () => {
     setError("");
     if (!credentials.email || !credentials.password) {
       setError("Email and Password are required!");
       return;
     }
-
+  
+    if (isSignUp) {
+      if (!isValidGmail(credentials.email)) {
+        alert("Please enter a valid Gmail address (ending with @gmail.com).");
+        return;
+      }
+      if (!isStrongPassword(credentials.password)) {
+        alert("Password must be at least 16 characters and include uppercase, lowercase, number, and special character.");
+        return;
+      }
+    }
+  
     const url = isSignUp ? `${process.env.REACT_APP_API_URL}/signup` : `${process.env.REACT_APP_API_URL}/signin`;
-
+  
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: credentials.email, password: credentials.password, role }),
       });
-
+  
       const data = await response.json();
-
+  
       if (response.ok && data.success) {
         if (role === "admin" && data.step === "otp") {
           setStep(2);
@@ -115,10 +135,11 @@ const Login = () => {
         setError(data.message || "Login failed! Check your credentials.");
       }
     } catch (error) {
-      console.error("❌ Error:", error);
+      console.error("Error:", error);
       setError("Failed to connect to the server.");
     }
   };
+  
 
   const handleVerifyOtp = async () => {
     setError("");
@@ -145,7 +166,7 @@ const Login = () => {
         setError(data.message || "Invalid OTP.");
       }
     } catch (error) {
-      console.error("❌ Error:", error);
+      console.error("Error:", error);
       setError("Failed to verify OTP.");
     }
   };

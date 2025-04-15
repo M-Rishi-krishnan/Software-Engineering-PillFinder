@@ -13,7 +13,7 @@ const AdminPanel = () => {
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
   const [newAdminAppPassword, setNewAdminAppPassword] = useState("");
-  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
+  const [authorized, setAuthorized] = useState(false);
   const [medicines, setMedicines] = useState([]);
   const navigate = useNavigate();
 
@@ -82,7 +82,6 @@ const AdminPanel = () => {
     setFilteredStores(filtered);
   };
 
-  // ✅ Delete Store + Owner
   const handleDeleteStore = async (storeId, ownerEmail) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-store`, {
@@ -108,7 +107,6 @@ const AdminPanel = () => {
     }
   };
 
-  // ✅ Delete User + Store (if Owner)
   const handleDeleteUser = async (userId, role, storeId) => {
     try {
       const token = localStorage.getItem("token");
@@ -139,7 +137,6 @@ const AdminPanel = () => {
     }
   };
 
-  // ✅ Delete Admin
   const handleDeleteAdmin = async (adminId) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-admin`, {
@@ -164,7 +161,7 @@ const AdminPanel = () => {
   };
 
   const handleAddAdmin = async () => {
-    const adminEmail = localStorage.getItem("email"); // Get logged-in admin's email
+    const adminEmail = localStorage.getItem("email"); 
   
     if (!adminEmail) {
       setError("Admin email is missing. Please log in again.");
@@ -181,7 +178,7 @@ const AdminPanel = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          adminEmail,  // 🔹 Send logged-in admin's email
+          adminEmail,  
           email: newAdminEmail,
           password: newAdminPassword,
           appPassword: newAdminAppPassword,
@@ -253,16 +250,15 @@ const AdminPanel = () => {
   };
   
   const handleLogout = () => {
-        // Clear application session
         localStorage.removeItem("isAuthenticated");
         localStorage.removeItem("role");
         localStorage.removeItem("token");
         localStorage.removeItem("email");
-       
-        // Redirect to Auth0 logout endpoint
-        const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
-        const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"; // Replace with your Client ID
-        const returnToUrl = `${window.location.origin}`; // Redirect back to your website's login page
+
+        const auth0Domain = process.env.AUTH0_DOMAIN;
+        const clientId = process.env.AUTH0_CLIENT_ID;
+
+        const returnToUrl = `${window.location.origin}`;
       
         window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
   };
@@ -290,7 +286,6 @@ const AdminPanel = () => {
             <button className="logout-btn1" onClick={handleLogout}>Logout</button>
           </div>
           
-          {/* Navigation Links */}
           <div className="navigation-links">
             <a href="#stores-section"><FaStore /> Stores</a>
             <a href="#users-section"><FaUsers /> Users</a>
@@ -306,7 +301,6 @@ const AdminPanel = () => {
             className="search-bar"
           />
 
-          {/* Add id attribute to each section */}
           <div id="stores-section" className="store-list">
             <h2 className="head2">Manage Stores</h2>
             <table>
@@ -365,7 +359,6 @@ const AdminPanel = () => {
             </table>
           </div>
           
-          {/* New Medicines Section */}
           <div id="medicines-section" className="medicine-list">
             <h2 className="head2">Manage Medicines</h2>
             <table>

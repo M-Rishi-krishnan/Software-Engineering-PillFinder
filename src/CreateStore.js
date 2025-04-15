@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import "./CreateStore.css";
 import { FaStore, FaUser, FaPhone ,FaExclamationTriangle} from "react-icons/fa";
 
-// Custom marker icon
 const storeIconUrl = "https://cdn-icons-png.flaticon.com/512/4320/4320337.png";
 
 const storeIcon = new L.Icon({
@@ -19,9 +18,9 @@ const CreateStore = () => {
   const [ownerName, setOwnerName] = useState("");
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
-  const [location, setLocation] = useState({ lat: 28.6139, lng: 77.209 }); // Default: New Delhi
+  const [location, setLocation] = useState({ lat: 28.6139, lng: 77.209 }); 
   const [address, setAddress] = useState("Default location: New Delhi"); 
-  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
+  const [authorized, setAuthorized] = useState(false); 
 
   const navigate = useNavigate();
 
@@ -104,12 +103,12 @@ const CreateStore = () => {
       storeName,
       ownerName,
       phone,
-      latitude: location.lat,   // ✅ Ensure it's sent correctly
-      longitude: location.lng,  // ✅ Ensure it's sent correctly
+      latitude: location.lat,  
+      longitude: location.lng,  
       address,
     };
   
-    console.log("📤 Sending Data:", requestBody);  // 🔴 Debugging log
+    console.log("Sending Data:", requestBody); 
   
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/create-store`, {
@@ -120,7 +119,7 @@ const CreateStore = () => {
       });
   
       const data = await response.json();
-      console.log("🔄 Server Response:", data);  // 🔴 Debugging log
+      console.log("Server Response:", data);
   
       if (response.ok && data.success) {
         alert("Store created successfully!");
@@ -129,12 +128,11 @@ const CreateStore = () => {
         setError(data.message);
       }
     } catch (err) {
-      console.error("❌ Failed to create store:", err);
+      console.error("Failed to create store:", err);
       setError("Failed to create store. Check your connection.");
     }
   };
   
-   // Render unauthorized message if not authorized
    if (!authorized) {
     return (
       <div className="createstorebody">
@@ -159,16 +157,12 @@ const CreateStore = () => {
   return (
     <div className="createstorebody">
       <div className="create-store-container">
-        
-        {/* Display store marker icon at the top */}
         <div className="store-icon-container">
           <img src={storeIconUrl} alt="Store Icon" className="store-icon-image" />
         </div>
 
         <div className="store-card">
           <h1>Create Your Store</h1>
-
-          {/* Store Name */}
           <div className="input-group">
             <FaStore />
             <input
@@ -180,7 +174,6 @@ const CreateStore = () => {
             />
           </div>
 
-          {/* Owner Name */}
           <div className="input-group">
             <FaUser />
             <input
@@ -192,7 +185,6 @@ const CreateStore = () => {
             />
           </div>
 
-          {/* Phone Number */}
           <div className="input-group">
             <FaPhone />
             <input
@@ -203,8 +195,6 @@ const CreateStore = () => {
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
-
-          {/* 📍 Select Store Location */}
           <h3>Select Store Location</h3>
           {error && <p className="error-text">{error}</p>}
           <p><strong>Selected Address:</strong> {address}</p>
@@ -218,8 +208,6 @@ const CreateStore = () => {
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <LocationMarker />
           </MapContainer>
-
-          {/* Submit Button */}
           <button className="store-button" onClick={handleCreateStore}>
             Create Store
           </button>

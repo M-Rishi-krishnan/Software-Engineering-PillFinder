@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./AddMedicine.css"; // Import CSS
+import "./AddMedicine.css"; 
 import { FaExclamationTriangle} from "react-icons/fa";
 
   const AddMedicine = () => {
   const [medicineName, setMedicineName] = useState("");
   const [stock, setStock] = useState("");
   const [price, setPrice] = useState("");
-  const [medicines, setMedicines] = useState([]); // Store medicines
+  const [medicines, setMedicines] = useState([]); 
   const [storeName, setStoreName] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");  
-  const email = localStorage.getItem("email"); // Fetch logged-in user's email
-  const [authorized, setAuthorized] = useState(false); // Track if user is authorized
+  const email = localStorage.getItem("email"); 
+  const [authorized, setAuthorized] = useState(false); 
 
   useEffect(() => {
     const userRole = localStorage.getItem("role");
@@ -34,7 +34,6 @@ import { FaExclamationTriangle} from "react-icons/fa";
     fetchStoreName();
   }, [email]);
 
-  // Fetch Store Name
   const fetchStoreName = async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/get-store?email=${email}`);
@@ -50,7 +49,6 @@ import { FaExclamationTriangle} from "react-icons/fa";
     }
   };
 
-  // Fetch Medicines
   const fetchMedicines = async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/get-medicines?email=${email}`);
@@ -65,8 +63,6 @@ import { FaExclamationTriangle} from "react-icons/fa";
     }
   };
 
-
-// Add New Medicine
 const handleSubmit = async () => {
   setMessage("");
   setError("");
@@ -98,7 +94,7 @@ const handleSubmit = async () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}` // FIXED: using backticks
+        "Authorization": `Bearer ${token}` 
       },
       body: JSON.stringify({
         email,
@@ -125,27 +121,18 @@ const handleSubmit = async () => {
   }
 };
 
-  // In your React component
 const isTokenExpired = () => {
   const token = localStorage.getItem("token");
   if (!token) return true;
-  
-  // JWT tokens are in format: header.payload.signature
   const payload = token.split('.')[1];
   const decoded = JSON.parse(atob(payload));
-  
-  // Check if the expiration time is past current time
   return decoded.exp < Date.now() / 1000;
 };
 
-// Use this before making API calls
 if (isTokenExpired()) {
-  // Redirect to login page
   navigate("/");
 }
 
-
-  // Update Medicine (Stock & Price)
   const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
     setError("");
     setMessage("");
@@ -160,7 +147,7 @@ if (isTokenExpired()) {
       return;
     }
 
-    const token = localStorage.getItem("token"); // Get token from local storage
+    const token = localStorage.getItem("token"); 
 
     const requestBody = {
       email,
@@ -174,7 +161,7 @@ if (isTokenExpired()) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}` // Use backticks for interpolation
+          "Authorization": `Bearer ${token}` 
 
         },
         body: JSON.stringify(requestBody),
@@ -183,7 +170,7 @@ if (isTokenExpired()) {
       const data = await response.json();
       if (data.success) {
         setMessage("Medicine updated successfully!");
-        fetchMedicines(); // Refresh list
+        fetchMedicines(); 
       } else {
         setError(data.message || "Failed to update medicine.");
       }
@@ -192,19 +179,15 @@ if (isTokenExpired()) {
     }
   };
 
-  
-  // Handle Logout
   const handleLogout = () => {
-        // Clear application session
         localStorage.removeItem("isAuthenticated");
         localStorage.removeItem("role");
         localStorage.removeItem("token");
         localStorage.removeItem("email");
        
-        // Redirect to Auth0 logout endpoint
-        const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
-        const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"; // Replace with your Client ID
-        const returnToUrl = `${window.location.origin}`; // Redirect back to your website's login page
+        const auth0Domain = process.env.AUTH0_DOMAIN;
+        const clientId = process.env.AUTH0_CLIENT_ID;
+        const returnToUrl = `${window.location.origin}`; 
       
         window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
   };
@@ -228,7 +211,6 @@ if (isTokenExpired()) {
   }
   return (
     <div className="container1">
-      {/* Navbar */}
       <div className="navbar1">
         <h2 className="store-title">Store: {storeName || "Loading..."}</h2>
         <button className="logout-btn" onClick={handleLogout}>
@@ -236,7 +218,6 @@ if (isTokenExpired()) {
         </button>
       </div>
 
-      {/* Add Medicine Form */}
       <div className="add-medicine-container">
         <h1>Add Medicine</h1>
 
@@ -269,8 +250,6 @@ if (isTokenExpired()) {
         {error && <p className="error-msg">{error}</p>}
         {message && <p className="success-msg">{message}</p>}
 
-        {/* Medicine List */}
-        
         <h2 className="medicine-list-heading">Available Medicines</h2>
         <div className="medicine-list">
           {medicines.length > 0 ? (

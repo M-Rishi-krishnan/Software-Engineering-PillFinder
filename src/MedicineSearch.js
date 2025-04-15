@@ -7,11 +7,9 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Set the app element for accessibility
 Modal.setAppElement('#root');
 
 const MedicineSearch = () => {
-  // Existing state variables
   const [query, setQuery] = useState("");
   const [allMedicines, setAllMedicines] = useState([]);
   const [filteredMedicines, setFilteredMedicines] = useState([]);
@@ -25,8 +23,6 @@ const MedicineSearch = () => {
   const [storeQuery, setStoreQuery] = useState("");
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState(null);
-  
-  // New state for modal
   const [modalIsOpen, setModalIsOpen] = useState(false);
   
   const userLat = userLocation?.latitude || 0;
@@ -34,7 +30,6 @@ const MedicineSearch = () => {
   const medLat = selectedMedicine?.latitude || 0;
   const medLng = selectedMedicine?.longitude || 0;
 
-  // Custom icons for markers
   const startIcon = new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -53,7 +48,6 @@ const MedicineSearch = () => {
     shadowSize: [41, 41]
   });
 
-  // Add this useEffect for continuous location tracking
 useEffect(() => {
   let watchId;
 
@@ -96,15 +90,13 @@ useEffect(() => {
   };
 }, []);
 
-// Update directions whenever location or selection changes
 useEffect(() => {
   if (selectedMedicine?.latitude && userLocation?.latitude) {
     getDirections();
   }
 }, [userLocation, selectedMedicine]);
 
-  
-  // Modified to open modal after selecting medicine
+
   const handleMedicineSelect = (medicine) => {
     setRouteCoordinates(null);
     setSelectedMedicine(medicine);  
@@ -114,7 +106,6 @@ useEffect(() => {
     }
   };
   
-  // Close modal function
   const closeModal = () => {
     setModalIsOpen(false);
   };
@@ -145,7 +136,6 @@ useEffect(() => {
 };
 ;
         
-     // Custom modal styles
   const customModalStyles = {
     content: {
       top: '50%',
@@ -174,38 +164,25 @@ useEffect(() => {
       try {
         setRouteCoordinates(null);
         const response = await fetch(`${process.env.REACT_APP_API_URL}/get-directions?start_lat=${String(userLocation.latitude)}&start_lon=${String(userLocation.longitude)}&end_lat=${String(selectedMedicine.latitude)}&end_lon=${String(selectedMedicine.longitude)}`);
-        const data = await response.json();
-        
-        //alert("Direction API response received"); // Debug
-        
+        const data = await response.json();      
         if (data.routes && data.routes[0] && data.routes[0].geometry) {
-          // This is for encoded polyline format
           const decodedRoute = decodePolyline(data.routes[0].geometry);
           setRouteCoordinates(decodedRoute);
         } 
         else if (data.features && data.features[0] && data.features[0].geometry) {
-          // This is for GeoJSON format
           const coordinates = data.features[0].geometry.coordinates;
-          // Convert from [lng, lat] to [lat, lng] format for Leaflet
           const routeCoords = coordinates.map(coord => [coord[1], coord[0]]);
           setRouteCoordinates(routeCoords);
-        // alert(`Extracted ${routeCoords.length} points from GeoJSON`);
         } 
-        else {
-          //alert("Invalid route data structure: " + JSON.stringify(data).substring(0, 100) + "...");
-        }
       } catch (error) {
-        //alert("Error fetching directions: " + error.message);
       }
     };
     
     
     useEffect(() => {
       if (routeCoordinates && routeCoordinates.length > 0) {
-        // Check if coordinates are in the correct format [lat, lng]
         const firstPoint = routeCoordinates[0];
         if (Array.isArray(firstPoint) && firstPoint.length === 2) {
-          //alert("Coordinates format looks correct: [lat, lng]");
         } else {
           alert("Warning: Coordinates may be in wrong format: " + JSON.stringify(firstPoint));
         }
@@ -377,15 +354,6 @@ useEffect(() => {
             .filter(filterByStoreName);
       
           setFilteredMedicines(filteredResults);
-          /*
-          if (input.trim()) {
-            const uniqueSuggestions = [
-              ...new Set(data.medicines.map((med) => med.name.toLowerCase()))
-            ].filter((name) => name.toLowerCase() !== input.toLowerCase()).slice(0, 5);
-            setSuggestions(uniqueSuggestions);
-          } else {
-            setSuggestions([]);
-          }*/
         } else {
           setError(data.message || "Failed to fetch medicines.");
           setFilteredMedicines([]);
@@ -403,16 +371,14 @@ useEffect(() => {
     };
 
     const handleLogout = () => {
-      // Clear application session
       localStorage.removeItem("isAuthenticated");
       localStorage.removeItem("role");
       localStorage.removeItem("token");
       localStorage.removeItem("email");
     
-      // Redirect to Auth0 logout endpoint
-      const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com"; // Replace with your Auth0 domain
-      const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"; // Replace with your Client ID
-      const returnToUrl = `${window.location.origin}`; // Redirect back to your website's login page
+      const auth0Domain = process.env.AUTH0_DOMAIN;
+      const clientId = process.env.CLIENT_ID;      
+      const returnToUrl = `${window.location.origin}`;
     
       window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
     };
@@ -476,7 +442,7 @@ useEffect(() => {
             <div className="search-results">
               {userLocation ? (
                 <p className="location-display">
-                  🌍 Your Location: {userLocation.address}
+                   Your Location: {userLocation.address}
                 </p>
               ) : (
                 <p className="error-msg">{locationError}</p>

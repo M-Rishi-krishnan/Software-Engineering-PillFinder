@@ -1,62 +1,55 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import random
 import psycopg2
 import bcrypt
-from flask_jwt_extended import create_access_token, jwt_required,verify_jwt_in_request,JWTManager, get_jwt_identity ,get_jwt
-from psycopg2.extras import RealDictCursor
-import random
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-import smtplib
-from functools import wraps
 import requests
 import os
-from flask import Flask, send_from_directory
+import smtplib
+from flask import Flask, request, jsonify,send_from_directory
+from flask_cors import CORS
+from flask_jwt_extended import create_access_token, jwt_required,verify_jwt_in_request,JWTManager, get_jwt_identity ,get_jwt
+from psycopg2.extras import RealDictCursor
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from functools import wraps
 
-# Initialize Flask app
 app = Flask(__name__, static_folder='build', static_url_path='/')
 
-# Route to serve React's index.html
 @app.route('/')
 def serve():
     return send_from_directory(app.static_folder, 'index.html')
 
-# Catch-all route for client-side routing
 @app.route('/<path:path>')
 def serve_static(path):
-    # Check if the requested file exists in the static folder
     if os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
-    # Fallback to index.html for client-side routing
     return send_from_directory(app.static_folder, 'index.html')
 
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins (adjust as needed)  
+CORS(app, resources={r"/*": {"origins": "*"}})   
 
-app.config["JWT_SECRET_KEY"] = "supersecuresecret"  # Change this!
-app.config["SECRET_KEY"] = "supersecuresecret"  # For sessions
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "default_jwt_secret")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "default_flask_secret")
+
 
 jwt = JWTManager(app)
 
-otp_storage = {}  # Temporary store for OTPs (use Redis in production)
+otp_storage = {}  
 
 limiter = Limiter(
-    key_func=get_remote_address,  # Limits based on client IP
+    key_func=get_remote_address, 
     app=app,
-    default_limits=["1000 per day", "200 per hour"]  # Global limits (adjust as needed)
+    default_limits=["1000 per day", "200 per hour"]  
 )
 
 @jwt.user_identity_loader
 def user_identity_lookup(user):
     if isinstance(user, dict):
-        # Create a new dictionary with string values
         return {
             "id": str(user.get("id", "")),
             "email": str(user.get("email", "")),
             "role": str(user.get("role", ""))
         }
-    return str(user)  # Ensure non-dict values are also strings
+    return str(user)  
 
-# ✅ Function to Connect to PostgreSQL
 def get_db_connection():
     return psycopg2.connect(
         dbname=os.environ.get("DB_NAME"),
@@ -66,7 +59,6 @@ def get_db_connection():
         port=os.environ.get("DB_PORT")
     )
 
-# ✅ Function to Get Table Name Based on Role
 def get_table_name(role):
     if role == "customer":
         return "users"
@@ -76,14 +68,52 @@ def get_table_name(role):
         return "admins"
     return None
 
-# ✅ User Signup Route
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
+        jwt_claims = get_jwt()  
+        role = jwt_claims.get("role")
+        
+        if role != "admin":
+            return jsonify({"message": "Admin access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def store_owner_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
+        jwt_claims = get_jwt() 
+        role = jwt_claims.get("role")
+        
+        if role != "storeOwner":
+            return jsonify({"message": "Store owner access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def customer_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        verify_jwt_in_request()
+        jwt_claims = get_jwt() 
+        role = jwt_claims.get("role")
+        
+        if role != "customer":
+            return jsonify({"message": "Customer access required", "success": False}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/signup", methods=["POST"])
-#@limiter.limit("5 per minute")  # Limit login attempts 
+@limiter.limit("5 per minute")  
 def signup():
     data = request.json
     email = data.get("email")
     password = data.get("password")
-    role = data.get("role")  # ✅ Capture role to decide table
+    role = data.get("role")  
 
     if not email or not password or not role:
         return jsonify({"message": "Missing required fields!", "success": False}), 400
@@ -94,7 +124,6 @@ def signup():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # ✅ If storeOwner → Insert into `owners` table
         if role == "storeOwner":
             cursor.execute("SELECT id FROM owners WHERE email = %s", (email,))
             if cursor.fetchone():
@@ -103,7 +132,6 @@ def signup():
             cursor.execute("INSERT INTO owners (email, password) VALUES (%s, %s) RETURNING id", (email, hashed_pw))
             user_id = cursor.fetchone()[0]
         
-        # ✅ If customer → Insert into `users` table
         elif role == "customer":
             cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
             if cursor.fetchone():
@@ -113,19 +141,17 @@ def signup():
             user_id = cursor.fetchone()[0]     
         
         else:
-                return jsonify({"message": "Invalid role!", "success": False}), 400
+            return jsonify({"message": "Invalid role!", "success": False}), 400
 
         conn.commit()
         cursor.close()
         conn.close()
 
-         # ✅ ADDED: Create token after successful signup
         access_token = create_access_token(
             identity=str(user_id),
             additional_claims={"email": email, "role": role}
         )
 
-        # ✅ Redirect Based on Role
         if role == "storeOwner":
             return jsonify({
                 "message": "Account created! Please create your store.",
@@ -149,14 +175,11 @@ def signup():
             }), 201
 
     except psycopg2.Error as e:
-        print(f"❌ Database Error: {e}")
+        print(f"Database Error: {e}")
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
-# ✅ User Login Route (with JWT)
-# ✅ User Login Route (with JWT)
-# Apply rate limiting to search route
 @app.route("/signin", methods=["POST"])
-#@limiter.limit("5 per minute")  
+@limiter.limit("5 per minute")  
 def signin():
     data = request.json
     email = data.get("email")
@@ -183,21 +206,17 @@ def signin():
             return jsonify({"message": "Invalid credentials!", "success": False}), 401
 
         if role == "admin":
-            # 🔹 Fetch the admin's email and app_password from the database
             cursor.execute("SELECT email, app_password FROM admins WHERE email = %s", (email,))
             admin_data = cursor.fetchone()
 
             if not admin_data:
                 return jsonify({"message": "Admin credentials not found!", "success": False}), 401
 
-            admin_email, app_password = admin_data  # Extract email and app_password
-
-            # 🔹 Generate and store OTP
+            admin_email, app_password = admin_data  
             otp = str(random.randint(100000, 999999))
             otp_storage[email] = otp  
 
             try:
-                # 🔹 Send email using the fetched credentials
                 server = smtplib.SMTP("smtp.gmail.com", 587)
                 server.starttls()
                 server.login(admin_email, app_password)
@@ -215,12 +234,10 @@ def signin():
             except Exception as e:
                 return jsonify({"message": f"Error sending email: {str(e)}", "success": False}), 500
 
-        # 🔹 Normal login for Store Owners & Customers
         access_token = create_access_token(
-        identity=str(user_id),  # Convert ID to string as main identity
+        identity=str(user_id),  
         additional_claims={"email": user_email, "role": role})
         print("Generated token:", access_token)
-        # ✅ Store role in the session
         return jsonify({
             "message": f"Login successful as {role}!",
             "token": access_token,
@@ -229,7 +246,7 @@ def signin():
         }), 200
 
     except psycopg2.Error as e:
-        print("❌ Login Error:", e)
+        print("Login Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
     finally:
@@ -237,7 +254,7 @@ def signin():
         conn.close()
 
 @app.route("/auth0-signin", methods=["POST"])
-#@limiter.limit("5 per minute") 
+@limiter.limit("5 per minute") 
 def auth0_signin():
     data = request.json
     email = data.get("email")
@@ -258,11 +275,9 @@ def auth0_signin():
         if not table_name:
             return jsonify({"message": "Invalid role!", "success": False}), 400
 
-        # Check if the user exists in the database
         cursor.execute(f"SELECT id FROM {table_name} WHERE email = %s", (email,))
         user = cursor.fetchone()
 
-        # If the user does not exist, create a new entry
         if not user:
             hashed_pw = bcrypt.hashpw(auth0_id.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
             cursor.execute(f"INSERT INTO {table_name} (email, password) VALUES (%s, %s) RETURNING id", (email, hashed_pw))
@@ -270,7 +285,6 @@ def auth0_signin():
             redirect_url = "/create-store" if role == "storeOwner" else "/medicine-search"
         else:
             user_id = user[0]
-            # Check if the store exists for store owners
             if role == "storeOwner":
                 cursor.execute("""
                     SELECT s.id FROM stores s
@@ -286,7 +300,6 @@ def auth0_signin():
         cursor.close()
         conn.close()
 
-        # Create a JWT token for authentication
         access_token = create_access_token(
             identity=str(user_id),
             additional_claims={"email": email, "role": role}
@@ -300,51 +313,8 @@ def auth0_signin():
         }), 200
 
     except psycopg2.Error as e:
-        print(f"❌ Auth0 Login Error: {e}")
+        print(f"Auth0 Login Error: {e}")
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
-
-
-
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        verify_jwt_in_request()
-        jwt_claims = get_jwt()  # Get the JWT claims
-        role = jwt_claims.get("role")
-        
-        if role != "admin":
-            return jsonify({"message": "Admin access required", "success": False}), 403
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
-def store_owner_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        verify_jwt_in_request()
-        jwt_claims = get_jwt()  # Get the JWT claims
-        role = jwt_claims.get("role")
-        
-        if role != "storeOwner":
-            return jsonify({"message": "Store owner access required", "success": False}), 403
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
-def customer_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        verify_jwt_in_request()
-        jwt_claims = get_jwt()  # Get the JWT claims
-        role = jwt_claims.get("role")
-        
-        if role != "customer":
-            return jsonify({"message": "Customer access required", "success": False}), 403
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
 
 @app.route("/verify-otp", methods=["POST"])
 def verify_otp():
@@ -355,20 +325,20 @@ def verify_otp():
     if otp_storage.get(email) == otp:
         del otp_storage[email]
         access_token = create_access_token(
-            identity=email,  # String identity
-            additional_claims={"role": "admin"}  # Add role as claim
+            identity=email, 
+            additional_claims={"role": "admin"}  
         )
         return jsonify({"message": "2FA successful", "token": access_token, "success": True}), 200
     else:
         return jsonify({"message": "Invalid OTP", "success": False}), 401
 
-# ✅ Store Creation Route
+
 @app.route("/create-store", methods=["POST"])
 @jwt_required()
 @store_owner_required
 def create_store():
     data = request.json
-    print("📥 Received Data:", data)  # Debugging log
+    print("📥 Received Data:", data) 
 
     email = data.get("email")
     store_name = data.get("storeName")
@@ -378,37 +348,31 @@ def create_store():
     longitude = data.get("longitude")
     address = data.get("address")
 
-    # ✅ Validate required fields
     if not email or not store_name or latitude is None or longitude is None or not owner_name or not phone:
-        print("❌ Missing required fields!")
+        print("Missing required fields!")
         return jsonify({"message": "All fields are required!", "success": False}), 400
 
-    # ✅ Ensure store name is formatted correctly
     store_name = store_name.lower().replace(" ", "_")
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # ✅ Check if owner exists
         cursor.execute("SELECT id FROM owners WHERE email = %s", (email,))
         owner = cursor.fetchone()
 
         if not owner:
-            print("❌ Store owner not found!")
+            print("Store owner not found!")
             return jsonify({"message": "Store owner not found!", "success": False}), 404
 
         owner_id = owner[0]
-
-        # ✅ Check if store already exists
         cursor.execute("SELECT id FROM stores WHERE name = %s", (store_name,))
         existing_store = cursor.fetchone()
 
         if existing_store:
-            print("❌ Store already exists!")
+            print("Store already exists!")
             return jsonify({"message": "Store already exists!", "success": False}), 400
 
-        # ✅ Insert into `stores` table with latitude & longitude
         cursor.execute("""
             INSERT INTO stores (name, owner_id, address, latitude, longitude, owner_name, phone) 
             VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
@@ -417,9 +381,8 @@ def create_store():
         store_id = cursor.fetchone()[0]
         conn.commit()
 
-        print(f"✅ Store '{store_name}' created successfully with ID: {store_id}")
+        print(f"Store '{store_name}' created successfully with ID: {store_id}")
 
-        # ✅ Create Medicine Table for the Store
         store_table_name = f"store_{store_name}_medicines"
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {store_table_name} (
@@ -431,7 +394,7 @@ def create_store():
         """)
         conn.commit()
 
-        print(f"✅ Medicine table '{store_table_name}' created successfully!")
+        print(f"Medicine table '{store_table_name}' created successfully!")
 
         cursor.close()
         conn.close()
@@ -439,7 +402,7 @@ def create_store():
         return jsonify({"message": "Store created successfully!", "storeId": store_id, "success": True}), 201
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @jwt.unauthorized_loader
@@ -447,19 +410,11 @@ def unauthorized_callback(error):
     print(f"Unauthorized: {error}")
     return jsonify({"success": False, "message": f"Missing token: {error}"}), 401
 
-@jwt.expired_token_loader
-def expired_token_callback(jwt_header, jwt_payload):
-    print("Token has expired")
-    return jsonify({"success": False, "message": "Token has expired"}), 401
-
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
     print(f"Invalid token: {error}")
     return jsonify({"success": False, "message": f"Invalid token: {error}"}), 401
 
-
-
-# ✅ Medicine Addition Route
 @app.route("/add-medicine", methods=["POST"])
 @jwt_required()
 @store_owner_required
@@ -467,11 +422,10 @@ def add_medicine():
     try:
         current_user = get_jwt_identity()
         print("JWT Identity:", current_user)
-        jwt_claims = get_jwt()  # Get the JWT claims
+        jwt_claims = get_jwt()  
         role = jwt_claims.get("role")
         if role != "storeOwner":
             return jsonify({"success": False, "message": "Store owner access required"}), 403
-        # Check if user is a store owner
         
         data = request.json
         print("Request data:", data)
@@ -486,7 +440,6 @@ def add_medicine():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Fetch store ID and store name (pharmacy name)
         cursor.execute("""
             SELECT s.id, s.name  
             FROM owners o  
@@ -501,39 +454,33 @@ def add_medicine():
         store_id, store_name = result
         table_name = f"store_{store_name}_medicines"
 
-        # Check if the medicine already exists in the store's medicine table
         cursor.execute(f"SELECT stock FROM {table_name} WHERE name = %s", (medicine_name,))
         store_medicine = cursor.fetchone()
 
         if store_medicine:
-            # Update stock if medicine exists
             cursor.execute(f"""
                 UPDATE {table_name} 
                 SET stock = stock + %s, price = %s 
                 WHERE name = %s
             """, (stock, price, medicine_name))
         else:
-            # Insert new medicine into the store-specific table
             cursor.execute(f"""
                 INSERT INTO {table_name} (name, stock, price)  
                 VALUES (%s, %s, %s)
             """, (medicine_name, stock, price))
 
-        # Check if the medicine already exists in the global medicines table
         cursor.execute("""
             SELECT stock FROM medicines WHERE name = %s AND store_id = %s
         """, (medicine_name, store_id))
         global_medicine = cursor.fetchone()
 
         if global_medicine:
-            # Update stock in the global medicines table
             cursor.execute("""
                 UPDATE medicines 
                 SET stock = stock + %s, price = %s 
                 WHERE name = %s AND store_id = %s
             """, (stock, price, medicine_name, store_id))
         else:
-            # **Insert the pharmacy name correctly**
             cursor.execute("""
                 INSERT INTO medicines (name, store_id, pharmacy, stock, price)  
                 VALUES (%s, %s, %s, %s, %s)
@@ -549,55 +496,6 @@ def add_medicine():
         print("Error in add_medicine:", str(e))
         return jsonify({"success": False, "message": str(e)}), 500
 
-# Medicine Search 
-@app.route("/search-medicine", methods=["GET"])
-def search_medicine():
-    query = request.args.get("query", "").strip().lower()
-
-    if not query:
-        return jsonify({"message": "No search query provided", "success": False}), 400
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # ✅ Fetch medicines along with store details
-        # ✅ Fetch medicines along with store details sorted by price (ascending)
-        cursor.execute("""
-        SELECT m.id, m.name, m.stock, m.price, s.name AS store_name, s.address
-        FROM medicines m
-        JOIN stores s ON m.store_id = s.id
-        WHERE LOWER(m.name) LIKE %s
-        ORDER BY m.price ASC  -- ✅ Sorting results by price in ascending order
-        """, (f"%{query}%",))
-
-        results = cursor.fetchall()
-
-        cursor.close()
-        conn.close()
-
-        if not results:
-            return jsonify({"message": "No medicines found", "success": False}), 404
-
-        medicines = [
-            {
-                "id": row[0],
-                "name": row[1],
-                "stock": row[2],
-                "price": float(row[3]),
-                "store_name": row[4],
-                "store_address": row[5]
-            }
-            for row in results
-        ]
-
-        return jsonify({"medicines": medicines, "success": True}), 200
-
-    except psycopg2.Error as e:
-        print("❌ Database Error:", e)
-        return jsonify({"message": "Database error!", "success": False}), 500
-
-#View all shop owners
 @app.route("/get-shop-owners", methods=["GET"])
 @jwt_required()
 @admin_required
@@ -605,8 +503,6 @@ def get_shop_owners():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # ✅ Fetch shop owners with their corresponding store name (if available)
         cursor.execute("""
             SELECT o.id, o.email, COALESCE(s.name, 'No Store') AS store_name
             FROM owners o
@@ -621,10 +517,9 @@ def get_shop_owners():
 
         return jsonify({"shopOwners": owner_list, "success": True}), 200
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-#Delete the shop owner and their store
 @app.route("/delete-shop-owner", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -638,31 +533,22 @@ def delete_shop_owner():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # ✅ Check if the owner exists
         cursor.execute("SELECT email FROM owners WHERE id = %s", (owner_id,))
         owner = cursor.fetchone()
 
         if not owner:
             return jsonify({"message": "Shop owner not found!", "success": False}), 404
 
-        # ✅ Check if the owner has a store
         cursor.execute("SELECT name FROM stores WHERE owner_id = %s", (owner_id,))
         store = cursor.fetchone()
 
         if store:
             store_name = store[0]
             store_table = f"store_{store_name}_medicines"
-
-            # ✅ Drop the store's medicine table (if exists)
             cursor.execute(f"DROP TABLE IF EXISTS {store_table}")
-
-            # ✅ Delete store record
             cursor.execute("DELETE FROM stores WHERE owner_id = %s", (owner_id,))
 
-        # ✅ Delete owner account
         cursor.execute("DELETE FROM owners WHERE id = %s", (owner_id,))
-
         conn.commit()
         cursor.close()
         conn.close()
@@ -670,48 +556,34 @@ def delete_shop_owner():
         return jsonify({"message": "Shop owner and store deleted successfully!", "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)  # ✅ Print error for debugging
+        print("Database Error:", e)  
         return jsonify({"message": "Database error! Please check server logs.", "success": False}), 500
 
-#Add Admins
 @app.route("/add-admin", methods=["POST"])
 @jwt_required()
 @admin_required
 def add_admin():
     data = request.json
-
-    # ✅ Log incoming data for debugging
     print("Received Data:", data)
 
-    admin_email = data.get("adminEmail")  # The existing admin making the request
+    admin_email = data.get("adminEmail")  
     new_admin_email = data.get("email")
     new_admin_password = data.get("password")
-    new_admin_app_password = data.get("appPassword")  # ✅ Store Gmail App Password
+    new_admin_app_password = data.get("appPassword") 
 
     if not admin_email or not new_admin_email or not new_admin_password or not new_admin_app_password:
-        print("❌ Missing fields in request!")
+        print("Missing fields in request!")
         return jsonify({"message": "All fields are required!", "success": False}), 400
 
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # ✅ Check if the requester is an existing admin
-       # cursor.execute("SELECT id FROM admins WHERE email = %s", (admin_email,))
-        #existing_admin = cursor.fetchone()
-
-        #if not existing_admin:
-         #   return jsonify({"message": "Unauthorized! Only admins can add new admins.", "success": False}), 403
-
-        # ✅ Check if the new admin email is already registered
         cursor.execute("SELECT id FROM admins WHERE email = %s", (new_admin_email,))
         if cursor.fetchone():
             return jsonify({"message": "Admin email already exists!", "success": False}), 400
 
-        # ✅ Hash the new admin password
         hashed_pw = bcrypt.hashpw(new_admin_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        # ✅ Insert the new admin into the database
         cursor.execute(
             "INSERT INTO admins (email, password, app_password) VALUES (%s, %s, %s)",
             (new_admin_email, hashed_pw, new_admin_app_password)
@@ -724,11 +596,9 @@ def add_admin():
         return jsonify({"message": "New admin added successfully!", "success": True}), 201
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
-
-# Delete Admin
 @app.route("/delete-admin", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -743,14 +613,12 @@ def delete_admin():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # ✅ Check if the admin being deleted is the main admin (email = '0')
         cursor.execute("SELECT email FROM admins WHERE id = %s", (admin_id,))
         admin = cursor.fetchone()
 
         if admin and admin[0] == "rishikrishnanm007@gmail.com":
             return jsonify({"message": "Main admin cannot be deleted!", "success": False}), 403
 
-        # ✅ Delete the admin if they are not the main admin
         cursor.execute("DELETE FROM admins WHERE id = %s", (admin_id,))
         conn.commit()
 
@@ -760,10 +628,9 @@ def delete_admin():
         return jsonify({"message": "Admin deleted successfully!", "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
-
-#Search Stores 
+ 
 @app.route("/search-stores", methods=["GET"])
 def search_stores():
     query = request.args.get("query", "").strip().lower()
@@ -789,7 +656,7 @@ def search_stores():
         return jsonify({"stores": store_list, "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @app.route("/delete-store", methods=["POST"])
@@ -805,8 +672,6 @@ def delete_store():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # ✅ Fetch store name and owner email using a JOIN
         cursor.execute(
             "SELECT s.name, o.email FROM stores s JOIN owners o ON s.owner_id = o.id WHERE s.id = %s", 
             (store_id,)
@@ -819,13 +684,8 @@ def delete_store():
         store_name, owner_email = store
         store_table = f"store_{store_name}_medicines"
 
-        # ✅ Drop the store's medicine table
         cursor.execute(f"DROP TABLE IF EXISTS {store_table}")
-
-        # ✅ Delete store record
         cursor.execute("DELETE FROM stores WHERE id = %s", (store_id,))
-
-        # ✅ Delete the owner based on email
         cursor.execute("DELETE FROM owners WHERE email = %s", (owner_email,))
 
         conn.commit()
@@ -835,7 +695,7 @@ def delete_store():
         return jsonify({"message": "Store and owner deleted successfully!", "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @app.route("/get-all-stores", methods=["GET"])
@@ -858,17 +718,14 @@ def get_all_stores():
 
         return jsonify({"stores": store_list, "success": True}), 200
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-#Get users for admin page
 @app.route("/get-all-users", methods=["GET"])
 def get_all_users():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # ✅ Fetch all users, store owners, and admins
         cursor.execute("""
             SELECT id, email, 'customer' AS role FROM users
             UNION ALL
@@ -880,17 +737,14 @@ def get_all_users():
 
         cursor.close()
         conn.close()
-
-        # ✅ Format response
         user_list = [{"id": row[0], "email": row[1], "role": row[2]} for row in users]
 
         return jsonify({"users": user_list, "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-#Delete User from admin
 @app.route("/delete-user", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -909,26 +763,20 @@ def delete_user():
         if role == "customer":
             table = "users"
         elif role == "storeOwner":
-            # ✅ Get the store ID before deleting the owner
             cursor.execute("SELECT id, name FROM stores WHERE owner_id = %s", (user_id,))
             store = cursor.fetchone()
 
             if store:
                 store_id, store_name = store
                 store_table = f"store_{store_name}_medicines"
-
-                # ✅ Drop store's medicine table
                 cursor.execute(f"DROP TABLE IF EXISTS {store_table}")
 
-                # ✅ Delete store from `stores`
                 cursor.execute("DELETE FROM stores WHERE id = %s", (store_id,))
 
-            # ✅ Delete owner from `owners`
             table = "owners"
         else:
             return jsonify({"message": "Invalid user role!", "success": False}), 400
 
-        # ✅ Delete user record
         cursor.execute(f"DELETE FROM {table} WHERE id = %s", (user_id,))
         
         conn.commit()
@@ -938,7 +786,7 @@ def delete_user():
         return jsonify({"message": "User and associated store (if applicable) deleted successfully!", "success": True}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 @app.route("/get-all-medicines", methods=["GET"])
@@ -946,8 +794,6 @@ def get_all_medicines():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-        # ✅ Fetch medicines along with store details
         cursor.execute("""
             SELECT m.id, m.name, m.stock, m.price, m.store_id,
                    s.name AS store_name, s.address AS store_address, s.phone AS store_phone
@@ -957,7 +803,6 @@ def get_all_medicines():
         """)
         medicines = cursor.fetchall()
 
-        # Convert price to float
         for med in medicines:
             med["price"] = float(med["price"])
 
@@ -970,17 +815,14 @@ def get_all_medicines():
 
 @app.route("/search-medicines", methods=["GET"])
 def search_medicines():
-    # Get query parameters
     query = request.args.get("query", "*").strip().lower()
     latitude = request.args.get("latitude", type=float)
     longitude = request.args.get("longitude", type=float)
     store_query = request.args.get("store", "").strip().lower()
 
-    # Validate user location
     if latitude is None or longitude is None:
         return jsonify({"message": "Missing location!", "success": False}), 400
 
-    # Check if search query is empty
     is_empty_search = (query == "*" and not store_query)
 
     try:
@@ -988,7 +830,6 @@ def search_medicines():
         cursor = conn.cursor()
 
         if is_empty_search:
-            # Fetch all medicines when no specific query is provided
             sql_query = """
                 SELECT 
                     m.name,
@@ -1023,7 +864,6 @@ def search_medicines():
                 for row in cursor.fetchall()
             ]
         else:
-            # Fetch medicines based on search query and calculate distance
             sql_query = """
                 SELECT 
                     m.name, 
@@ -1071,37 +911,10 @@ def search_medicines():
         return jsonify({"success": True, "medicines": medicines}), 200
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
 
-
-
-@app.route("/suggest-medicines", methods=["GET"])
-def suggest_medicines():
-    query = request.args.get("query", "").strip()
-
-    if not query:
-        return jsonify({"success": False, "error": "Query is empty"}), 400
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT DISTINCT name FROM medicines WHERE LOWER(name) LIKE %s LIMIT 5",
-            (f"%{query.lower()}%",)
-        )
-        suggestions = [row[0] for row in cursor.fetchall()]
-
-        cursor.close()
-        conn.close()
-        return jsonify({"success": True, "suggestions": suggestions})
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-# ✅ API: Get Medicines for a Specific Store
 @app.route("/get-medicines", methods=["GET"])
 def get_medicines():
     email = request.args.get("email")
@@ -1111,8 +924,6 @@ def get_medicines():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # Fetch store name from owners and stores table
         cursor.execute("""
             SELECT s.name  
             FROM owners o  
@@ -1185,7 +996,6 @@ def update_medicine():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Fetch store ID and store name
         cursor.execute("""
             SELECT s.id, s.name  
             FROM owners o  
@@ -1200,21 +1010,18 @@ def update_medicine():
         store_id, store_name = result
         table_name = f"store_{store_name}_medicines"
 
-        # Check if the medicine exists in the store's medicine table
         cursor.execute(f"SELECT stock FROM {table_name} WHERE name = %s", (medicine_name,))
         store_medicine = cursor.fetchone()
 
         if not store_medicine:
             return jsonify({"success": False, "message": "Medicine not found in store"}), 404
 
-        # Update stock and price in the store-specific medicines table
         cursor.execute(f"""
             UPDATE {table_name} 
             SET stock = %s, price = %s 
             WHERE name = %s
         """, (new_stock, new_price, medicine_name))
 
-        # Update stock and price in the global medicines table
         cursor.execute("""
             UPDATE medicines 
             SET stock = %s, price = %s 
@@ -1242,8 +1049,6 @@ def delete_medicine():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-
-        # Fetch store ID and store name
         cursor.execute("""
             SELECT s.id, s.name  
             FROM owners o  
@@ -1258,10 +1063,7 @@ def delete_medicine():
         store_id, store_name = result
         table_name = f"store_{store_name}_medicines"
 
-        # Delete from store-specific table
         cursor.execute(f"DELETE FROM {table_name} WHERE name = %s", (medicine_name,))
-        
-        # Delete from global medicines table
         cursor.execute("""
             DELETE FROM medicines 
             WHERE name = %s AND store_id = %s
@@ -1299,7 +1101,6 @@ def admin_delete_medicine():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Fetch store name
         cursor.execute("SELECT name FROM stores WHERE id = %s", (store_id,))
         result = cursor.fetchone()
 
@@ -1309,10 +1110,7 @@ def admin_delete_medicine():
         store_name = result[0]
         table_name = f"store_{store_name}_medicines"
 
-        # Delete from store-specific table
         cursor.execute(f"DELETE FROM {table_name} WHERE name = %s", (medicine_name,))
-        
-        # Delete from global medicines table
         cursor.execute("""
             DELETE FROM medicines 
             WHERE id = %s AND store_id = %s
@@ -1339,11 +1137,8 @@ def get_directions():
         return jsonify({"error": "Missing required parameters"}), 400
     
     try:
-        ors_api_key = "5b3ce3597851110001cf6248f613eed7849e4452babf2db23cf4bc41"
+        ors_api_key = os.environ.get("ORS_API_KEY")
         url = f"https://api.openrouteservice.org/v2/directions/driving-car?api_key={ors_api_key}&start={start_lon},{start_lat}&end={end_lon},{end_lat}"
-        
-        
-        response = requests.get(url)
 
         response = requests.get(url)
         if response.status_code == 200:
