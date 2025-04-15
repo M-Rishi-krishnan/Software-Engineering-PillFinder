@@ -377,7 +377,7 @@ useEffect(() => {
       localStorage.removeItem("email");
     
       const auth0Domain = process.env.AUTH0_DOMAIN;
-      const clientId = process.env.CLIENT_ID;      
+      const clientId = process.env.AUTH0_CLIENT_ID;      
       const returnToUrl = `${window.location.origin}`;
     
       window.location.href = `https://${auth0Domain}/v2/logout?returnTo=${encodeURIComponent(returnToUrl)}&client_id=${clientId}`;
