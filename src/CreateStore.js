@@ -24,6 +24,7 @@ const CreateStore = () => {
 
   const navigate = useNavigate();
 
+  //Getting current owner address
   useEffect(() => {
     const userRole = localStorage.getItem("role");
     
@@ -54,6 +55,7 @@ const CreateStore = () => {
     }
   }, []);
 
+  //For getting address
   const fetchAddress = async (lat, lng) => {
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
@@ -68,6 +70,7 @@ const CreateStore = () => {
     }
   };
 
+  //Marking shop location on amp
   const LocationMarker = () => {
     useMapEvents({
       click(e) {
@@ -85,8 +88,8 @@ const CreateStore = () => {
     );
   };
 
+  //Posts to backend for creating a store
   const handleCreateStore = async () => {
-    
     if (!storeName.trim() || !ownerName.trim() || !phone.trim() || location.lat == null || location.lng == null) {
       setError("All fields are required.");
       return;

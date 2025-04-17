@@ -48,9 +48,9 @@ const MedicineSearch = () => {
     shadowSize: [41, 41]
   });
 
+//To dynamically watch if user coordinates are changing
 useEffect(() => {
   let watchId;
-
   const successCallback = async (position) => {
     const latitude = position.coords.latitude;
     const longitude = position.coords.longitude;
@@ -90,14 +90,15 @@ useEffect(() => {
   };
 }, []);
 
+//For Getting directions to store after selecting a medicine
 useEffect(() => {
   if (selectedMedicine?.latitude && userLocation?.latitude) {
     getDirections();
   }
 }, [userLocation, selectedMedicine]);
 
-
-  const handleMedicineSelect = (medicine) => {
+//Selecting a medicine
+const handleMedicineSelect = (medicine) => {
     setRouteCoordinates(null);
     setSelectedMedicine(medicine);  
     if (medicine.store_id) {
@@ -106,7 +107,7 @@ useEffect(() => {
     }
   };
   
-  const closeModal = () => {
+const closeModal = () => {
     setModalIsOpen(false);
   };
   
@@ -116,8 +117,8 @@ useEffect(() => {
     }
   }, [selectedMedicine, userLocation]);
   
-
-  const fetchStoreCoordinates = async (storeId) => {
+//Getting store Coordinates
+const fetchStoreCoordinates = async (storeId) => {
     try {
         const response = await fetch(`${process.env.REACT_APP_API_URL}/get-store-coordinates?store_id=${storeId}`);
         const data = await response.json();
@@ -135,8 +136,8 @@ useEffect(() => {
     }
 };
 ;
-        
-  const customModalStyles = {
+
+const customModalStyles = {
     content: {
       top: '50%',
       left: '50%',
@@ -154,8 +155,8 @@ useEffect(() => {
     }
   };
     
-    
-    const getDirections = async () => {
+//Main get direction function
+const getDirections = async () => {
       if (!selectedMedicine || !selectedMedicine.latitude || !selectedMedicine.longitude || !userLocation) {
         alert("Invalid coordinates for directions");
         return;
@@ -178,7 +179,7 @@ useEffect(() => {
       }
     };
     
-    
+    //Checking if Coordinates are in right format
     useEffect(() => {
       if (routeCoordinates && routeCoordinates.length > 0) {
         const firstPoint = routeCoordinates[0];
@@ -191,19 +192,21 @@ useEffect(() => {
     
 
     const navigate = useNavigate();
-
     const userRole = localStorage.getItem("role");
 
+    //Test navigation button
     const handleAddMedicineClick = () => {
       navigate("/add-medicine");
     };
 
     useEffect(() => {
       if (!localStorage.getItem("isAuthenticated")) {
-        navigate("/medicine-search");
+        navigate("/");
       }
     }, [navigate]);
 
+
+    //Displays all medicines available on mount
     useEffect(() => {
       const fetchAllMedicines = async () => {
         try {
@@ -224,6 +227,7 @@ useEffect(() => {
       fetchAllMedicines();
     }, []);
 
+    //Gets user location on mount
     useEffect(() => {
       const fetchLocation = async () => {
         const location = await getUserLocation();
@@ -279,6 +283,7 @@ useEffect(() => {
       });
     };
     
+    //For plotting route on map
     function decodePolyline(encoded) {
       const poly = [];
       let index = 0;
@@ -331,6 +336,7 @@ useEffect(() => {
       return storeQuery === "" || medicine.store_name.toLowerCase().includes(storeQuery.toLowerCase());
     };
     
+    //Fetch medicines after applying filters
     const fetchFilteredMedicines = async (input) => {
       try {
         const { latitude, longitude } = userLocation || {};
@@ -365,6 +371,7 @@ useEffect(() => {
       }
     };
     
+    //Searching for a medicine
     const handleSearch = (input) => {
       setQuery(input);
       fetchFilteredMedicines(input);
@@ -387,6 +394,7 @@ useEffect(() => {
       fetchFilteredMedicines(query);
     };
 
+    //For distance visibility while searching for a medicine
     const isSearching = query.trim() !== "";
 
     return (

@@ -17,6 +17,7 @@ const AdminPanel = () => {
   const [medicines, setMedicines] = useState([]);
   const navigate = useNavigate();
 
+  //Checking for role
   useEffect(() => {
     const userRole = localStorage.getItem("role");
     
@@ -34,6 +35,7 @@ const AdminPanel = () => {
 
   const token = localStorage.getItem("token");
 
+  //Display all stores
   const fetchStores = () => {
     fetch(`${process.env.REACT_APP_API_URL}/get-all-stores`, {
       headers: {
@@ -52,6 +54,7 @@ const AdminPanel = () => {
       .catch(() => setError("Failed to fetch stores."));
   };
 
+  //Display all users
   const fetchUsers = () => {
     fetch(`${process.env.REACT_APP_API_URL}/get-all-users`, {
       headers: {
@@ -82,6 +85,7 @@ const AdminPanel = () => {
     setFilteredStores(filtered);
   };
 
+  //Delete a store
   const handleDeleteStore = async (storeId, ownerEmail) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-store`, {
@@ -107,6 +111,7 @@ const AdminPanel = () => {
     }
   };
 
+  //Delete a user
   const handleDeleteUser = async (userId, role, storeId) => {
     try {
       const token = localStorage.getItem("token");
@@ -137,6 +142,7 @@ const AdminPanel = () => {
     }
   };
 
+  //Delete other admins
   const handleDeleteAdmin = async (adminId) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/delete-admin`, {
@@ -160,6 +166,7 @@ const AdminPanel = () => {
     }
   };
 
+  //Add other admins
   const handleAddAdmin = async () => {
     const adminEmail = localStorage.getItem("email"); 
   
@@ -176,7 +183,10 @@ const AdminPanel = () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/add-admin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           adminEmail,  
           email: newAdminEmail,
@@ -199,6 +209,7 @@ const AdminPanel = () => {
     }
   };
   
+  //Delete a medicine
   const handleDeleteMedicine = async (medicineId, storeId, medicineName) => {
     try {
       if (!medicineId || !storeId || !medicineName) {
@@ -231,6 +242,7 @@ const AdminPanel = () => {
     }
   };
 
+  //Display all medicines
   const fetchMedicines = () => {
     fetch(`${process.env.REACT_APP_API_URL}/get-all-medicines`, {
       headers: {
@@ -255,8 +267,8 @@ const AdminPanel = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("email");
 
-        const auth0Domain = process.env.AUTH0_DOMAIN;
-        const clientId = process.env.AUTH0_CLIENT_ID;
+        const auth0Domain = "dev-pfxq5f1mprdmtiuk.us.auth0.com";
+        const clientId = "p0ltv0AFCMYykNcihJLcfSwveNUKHVXV";
 
         const returnToUrl = `${window.location.origin}`;
       

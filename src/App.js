@@ -10,8 +10,8 @@ import AdminPanel from './AdminPanel';
 function App() {
   return (
     <Auth0Provider
-     domain={process.env.AUTH0_DOMAIN}
-     clientId={process.env.AUTH0_CLIENT_ID}
+     domain="dev-pfxq5f1mprdmtiuk.us.auth0.com"
+     clientId="p0ltv0AFCMYykNcihJLcfSwveNUKHVXV"
       authorizationParams={{ 
         redirect_uri: window.location.origin 
       }}

@@ -16,13 +16,14 @@ const Login = () => {
   const navigate = useNavigate();
   const { loginWithRedirect, user, isAuthenticated } = useAuth0();
 
+  //Block signup option for admin
   useEffect(() => {
     if (role === "admin") {
       setIsSignUp(false);
     }
   }, [role]);
   
-
+  //Clear localStorage
   useEffect(() => {
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("role");
@@ -30,6 +31,7 @@ const Login = () => {
     localStorage.removeItem("email");
   }, []);
 
+  //Initiates Auth0 flow
   const handleAuth0Login = async (selectedRole) => {
     localStorage.setItem('selectedRole', selectedRole);
     await loginWithRedirect({
@@ -38,6 +40,7 @@ const Login = () => {
     });
   };
 
+  //Post user info to backend after auth0 login
   useEffect(() => {
     const handleRoleSelect = async () => {
       if (isAuthenticated && user) {
@@ -79,19 +82,22 @@ const Login = () => {
     handleRoleSelect();
   }, [isAuthenticated, user, navigate]);
 
+  //Ensuring changes in entity
   const handleChange = (e) => {
     setCredentials({ ...credentials, [e.target.name]: e.target.value });
   };
 
+  //Ensuring 16 letter password with lowercase, Uppercase and Special characters
   function isStrongPassword(password) {
   return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{16,}$/.test(password);
   }
 
+  //Ensuring only gmail is entered
   function isValidGmail(email) {
   return /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
   }
 
-
+  //Posts user info to backend for traditional login
   const handleSubmit = async () => {
     setError("");
     if (!credentials.email || !credentials.password) {
@@ -111,7 +117,7 @@ const Login = () => {
     }
   
     const url = isSignUp ? `${process.env.REACT_APP_API_URL}/signup` : `${process.env.REACT_APP_API_URL}/signin`;
-  
+
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -140,7 +146,7 @@ const Login = () => {
     }
   };
   
-
+  //Posts OTP to backend and verifies OTP
   const handleVerifyOtp = async () => {
     setError("");
     if (!otp.trim()) {

@@ -17,6 +17,7 @@ import { FaExclamationTriangle} from "react-icons/fa";
   const email = localStorage.getItem("email"); 
   const [authorized, setAuthorized] = useState(false); 
 
+  //Check for role
   useEffect(() => {
     const userRole = localStorage.getItem("role");
     
@@ -34,6 +35,7 @@ import { FaExclamationTriangle} from "react-icons/fa";
     fetchStoreName();
   }, [email]);
 
+  //Get store name
   const fetchStoreName = async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/get-store?email=${email}`);
@@ -49,6 +51,7 @@ import { FaExclamationTriangle} from "react-icons/fa";
     }
   };
 
+  //Get medicines of a store
   const fetchMedicines = async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/get-medicines?email=${email}`);
@@ -121,6 +124,7 @@ const handleSubmit = async () => {
   }
 };
 
+//In case the JWT token expires 
 const isTokenExpired = () => {
   const token = localStorage.getItem("token");
   if (!token) return true;
@@ -133,7 +137,8 @@ if (isTokenExpired()) {
   navigate("/");
 }
 
-  const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
+//Update medicines stock and price
+const handleUpdate = async (medicineName, updatedStock, updatedPrice) => {
     setError("");
     setMessage("");
     

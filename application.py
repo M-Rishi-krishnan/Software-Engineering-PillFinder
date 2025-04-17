@@ -4,25 +4,17 @@ import bcrypt
 import requests
 import os
 import smtplib
-from flask import Flask, request, jsonify,send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, jwt_required,verify_jwt_in_request,JWTManager, get_jwt_identity ,get_jwt
 from psycopg2.extras import RealDictCursor
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
+from dotenv import load_dotenv
+load_dotenv()
 
-app = Flask(__name__, static_folder='build', static_url_path='/')
-
-@app.route('/')
-def serve():
-    return send_from_directory(app.static_folder, 'index.html')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    if os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    return send_from_directory(app.static_folder, 'index.html')
+app= Flask(__name__)
 
 CORS(app, resources={r"/*": {"origins": "*"}})   
 
@@ -49,6 +41,16 @@ def user_identity_lookup(user):
             "role": str(user.get("role", ""))
         }
     return str(user)  
+
+@jwt.unauthorized_loader
+def unauthorized_callback(error):
+    print(f"Unauthorized: {error}")
+    return jsonify({"success": False, "message": f"Missing token: {error}"}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    print(f"Invalid token: {error}")
+    return jsonify({"success": False, "message": f"Invalid token: {error}"}), 401
 
 def get_db_connection():
     return psycopg2.connect(
@@ -107,6 +109,7 @@ def customer_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+#Create new account
 @app.route("/signup", methods=["POST"])
 @limiter.limit("5 per minute")  
 def signup():
@@ -178,6 +181,7 @@ def signup():
         print(f"Database Error: {e}")
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
+#Sign in using traditional login
 @app.route("/signin", methods=["POST"])
 @limiter.limit("5 per minute")  
 def signin():
@@ -237,7 +241,7 @@ def signin():
         access_token = create_access_token(
         identity=str(user_id),  
         additional_claims={"email": user_email, "role": role})
-        print("Generated token:", access_token)
+        
         return jsonify({
             "message": f"Login successful as {role}!",
             "token": access_token,
@@ -253,6 +257,7 @@ def signin():
         cursor.close()
         conn.close()
 
+#Sign in using auth0 (google)
 @app.route("/auth0-signin", methods=["POST"])
 @limiter.limit("5 per minute") 
 def auth0_signin():
@@ -316,6 +321,7 @@ def auth0_signin():
         print(f"Auth0 Login Error: {e}")
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
+#Verify admin MFA OTP
 @app.route("/verify-otp", methods=["POST"])
 def verify_otp():
     data = request.json
@@ -332,7 +338,7 @@ def verify_otp():
     else:
         return jsonify({"message": "Invalid OTP", "success": False}), 401
 
-
+#Create a new store
 @app.route("/create-store", methods=["POST"])
 @jwt_required()
 @store_owner_required
@@ -402,19 +408,10 @@ def create_store():
         return jsonify({"message": "Store created successfully!", "storeId": store_id, "success": True}), 201
 
     except psycopg2.Error as e:
-        print("❌ Database Error:", e)
+        print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-@jwt.unauthorized_loader
-def unauthorized_callback(error):
-    print(f"Unauthorized: {error}")
-    return jsonify({"success": False, "message": f"Missing token: {error}"}), 401
-
-@jwt.invalid_token_loader
-def invalid_token_callback(error):
-    print(f"Invalid token: {error}")
-    return jsonify({"success": False, "message": f"Invalid token: {error}"}), 401
-
+#Add medicines to a particular Store
 @app.route("/add-medicine", methods=["POST"])
 @jwt_required()
 @store_owner_required
@@ -496,6 +493,7 @@ def add_medicine():
         print("Error in add_medicine:", str(e))
         return jsonify({"success": False, "message": str(e)}), 500
 
+#Display all shop owners
 @app.route("/get-shop-owners", methods=["GET"])
 @jwt_required()
 @admin_required
@@ -520,6 +518,7 @@ def get_shop_owners():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Delete Shop Owners
 @app.route("/delete-shop-owner", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -559,6 +558,7 @@ def delete_shop_owner():
         print("Database Error:", e)  
         return jsonify({"message": "Database error! Please check server logs.", "success": False}), 500
 
+#Add new admins
 @app.route("/add-admin", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -599,6 +599,7 @@ def add_admin():
         print("Database Error:", e)
         return jsonify({"message": "Database error! Please try again.", "success": False}), 500
 
+#Delete other Admins
 @app.route("/delete-admin", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -631,6 +632,9 @@ def delete_admin():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
  
+# Allows Admin to Search Stores
+@jwt_required()
+@admin_required 
 @app.route("/search-stores", methods=["GET"])
 def search_stores():
     query = request.args.get("query", "").strip().lower()
@@ -659,6 +663,7 @@ def search_stores():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Delete stores by admin
 @app.route("/delete-store", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -698,6 +703,9 @@ def delete_store():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Display all stores in admin panel
+@jwt_required()
+@admin_required
 @app.route("/get-all-stores", methods=["GET"])
 def get_all_stores():
     try:
@@ -721,6 +729,9 @@ def get_all_stores():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Display All users in admin panel
+@jwt_required()
+@admin_required
 @app.route("/get-all-users", methods=["GET"])
 def get_all_users():
     try:
@@ -745,6 +756,7 @@ def get_all_users():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Delete a user from admin panel
 @app.route("/delete-user", methods=["POST"])
 @jwt_required()
 @admin_required
@@ -789,6 +801,7 @@ def delete_user():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
+#Shows all available medicines
 @app.route("/get-all-medicines", methods=["GET"])
 def get_all_medicines():
     try:
@@ -813,6 +826,7 @@ def get_all_medicines():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+#Searching for a particular medicine
 @app.route("/search-medicines", methods=["GET"])
 def search_medicines():
     query = request.args.get("query", "*").strip().lower()
@@ -914,7 +928,9 @@ def search_medicines():
         print("Database Error:", e)
         return jsonify({"message": "Database error!", "success": False}), 500
 
-
+#Shows all medicines available in a store
+@jwt_required()
+@store_owner_required
 @app.route("/get-medicines", methods=["GET"])
 def get_medicines():
     email = request.args.get("email")
@@ -952,6 +968,9 @@ def get_medicines():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
+#Get store name
+@jwt_required()
+@store_owner_required
 @app.route("/get-store", methods=["GET"])
 def get_store():
     email = request.args.get("email")
@@ -981,6 +1000,9 @@ def get_store():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
+#Update medicine stock and price
+@jwt_required()
+@store_owner_required
 @app.route("/update-medicine", methods=["POST"])
 def update_medicine():
     data = request.json
@@ -1037,47 +1059,9 @@ def update_medicine():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
-@app.route("/delete-medicine", methods=["POST"])
-def delete_medicine():
-    data = request.json
-    email = data.get("email")
-    medicine_name = data.get("medicineName")
-
-    if not email or not medicine_name:
-        return jsonify({"success": False, "message": "Email and medicine name are required"}), 400
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT s.id, s.name  
-            FROM owners o  
-            JOIN stores s ON o.id = s.owner_id  
-            WHERE o.email = %s
-        """, (email,))
-        result = cursor.fetchone()
-
-        if not result:
-            return jsonify({"success": False, "message": "Store not found"}), 404
-
-        store_id, store_name = result
-        table_name = f"store_{store_name}_medicines"
-
-        cursor.execute(f"DELETE FROM {table_name} WHERE name = %s", (medicine_name,))
-        cursor.execute("""
-            DELETE FROM medicines 
-            WHERE name = %s AND store_id = %s
-        """, (medicine_name, store_id))
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return jsonify({"success": True, "message": "Medicine deleted successfully"}), 200
-
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
-
+#Delete medicines from admin panel
+@jwt_required()
+@admin_required
 @app.route("/admin-delete-medicine", methods=["OPTIONS"])
 def admin_delete_medicine_options():
     response = jsonify({"success": True})
@@ -1101,7 +1085,6 @@ def admin_delete_medicine():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Fetch store name
         cursor.execute("SELECT name FROM stores WHERE id = %s", (store_id,))
         result = cursor.fetchone()
 
@@ -1127,6 +1110,7 @@ def admin_delete_medicine():
         print(f"Error in admin_delete_medicine: {str(e)}")
         return jsonify({"success": False, "message": str(e)}), 500
 
+#To get route coordinates
 @app.route("/get-directions", methods=["GET"])
 def get_directions():
     start_lat = request.args.get("start_lat")
@@ -1151,8 +1135,7 @@ def get_directions():
         print("Error fetching directions:", str(e))
         return jsonify({"error": "Failed to get directions", "details": str(e)}), 500
 
-
-
+#To get target store coordinates
 @app.route("/get-store-coordinates", methods=["GET"])
 def get_store_coordinates():
     store_id = request.args.get("store_id")
@@ -1177,7 +1160,6 @@ def get_store_coordinates():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True) 
